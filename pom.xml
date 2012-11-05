@@ -8,10 +8,20 @@
     <packaging>jar</packaging>
 
     <name>dcpu emulator</name>
-    <url>http://maven.apache.org</url>
+    <url>http://github.com/entrusc/dcpu</url>
+
+    <licenses>
+        <license>
+            <name>Gnu General Public License, Version 3.0</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <netbeans.hint.license>gpl30</netbeans.hint.license>
     </properties>
 
     <build>
@@ -29,12 +39,6 @@
     </build>
 
     <dependencies>
-<!--        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.9.8</version>
-        </dependency>
-              -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
