@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Florian Frankenberger <f.frankenberger@darkblue.de>
+ * Copyright (C) 2012 Florian Frankenberger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ package de.darkblue.dcpu.parser;
 
 /**
  *
- * @author Florian Frankenberger <f.frankenberger@darkblue.de>
+ * @author Florian Frankenberger
  */
 public class ParserException extends Exception {
 

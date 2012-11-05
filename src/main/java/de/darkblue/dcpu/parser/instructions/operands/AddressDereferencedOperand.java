@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Florian Frankenberger <f.frankenberger@darkblue.de>
+ * Copyright (C) 2012 Florian Frankenberger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ import de.darkblue.dcpu.parser.instructions.Operand;
 
 /**
  *
- * @author Florian Frankenberger <f.frankenberger@darkblue.de>
+ * @author Florian Frankenberger
  */
 public class AddressDereferencedOperand implements Operand {
 
