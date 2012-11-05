@@ -21,9 +21,13 @@ import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Instruction;
 import de.darkblue.dcpu.parser.instructions.Opcode;
 import de.darkblue.dcpu.parser.instructions.Operand;
-import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
 import de.darkblue.dcpu.parser.instructions.operands.LiteralOperand;
-import de.darkblue.dcpu.parser.instructions.operands.RamDereferencedOperand;
+import de.darkblue.dcpu.parser.instructions.operands.PickNOperand;
+import de.darkblue.dcpu.parser.instructions.operands.PushPopOperand;
+import de.darkblue.dcpu.parser.instructions.operands.AddressDereferencedOperand;
+import de.darkblue.dcpu.parser.instructions.operands.JumpMarkDereferencedOperand;
+import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
+import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedAddNextWordOperand;
 import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedOperand;
 import de.darkblue.dcpu.parser.instructions.operands.RegisterOperand;
 import java.io.IOException;
@@ -45,16 +49,17 @@ public class Parser {
     
     public Parser(Reader reader) throws IOException {
         tokenizer = new Tokenizer(reader, ';', ',', ':');
+        tokenizer.registerJoinChars('[', ']');
     }
     
-    public DCPUCode parse() throws IOException, ParserException {
+    public DCPUCode parse() throws IOException, ParserException, SemanticException {
         final DCPUCode code = new DCPUCode();
         while (parseInstructionOrLabel(code)) {
         }
         return code;
     }
     
-    private boolean parseInstructionOrLabel(DCPUCode code) throws IOException, ParserException {
+    private boolean parseInstructionOrLabel(DCPUCode code) throws IOException, ParserException, SemanticException {
         String token = tokenizer.next();
         
         if (token != null) {
@@ -77,7 +82,7 @@ public class Parser {
         code.addJumpMarking(token);
     }
     
-    private void parseInstruction(DCPUCode code) throws ParserException, IOException {
+    private void parseInstruction(DCPUCode code) throws ParserException, IOException, SemanticException {
         final Opcode opcode = parseOpcode();
 
         Operand firstOperand = parseOperand();
@@ -88,6 +93,8 @@ public class Parser {
         Operand secondOperand = null;
         if (checkNextTokenIs(",", false)) {
             secondOperand = parseOperand();
+        } else {
+            tokenizer.pushBack();
         }
 
         //now we check if the actual instruction really awaits this amount
@@ -127,7 +134,7 @@ public class Parser {
         return opcode;
     }
     
-    private Operand parseOperand() throws IOException, ParserException {
+    private Operand parseOperand() throws IOException, ParserException, SemanticException {
         final String token = getNextToken();
 
         final Integer tokenNumeric = getNumberToken(token);
@@ -140,21 +147,56 @@ public class Parser {
                 return new RegisterOperand(register);
             } else
                 if (operand.startsWith("[") || operand.endsWith("]")) {
-                    final String dereferenced = operand.substring(1, operand.length() - 2);
+                    final String dereferenced = operand.substring(1, operand.length() - 1);
                     final Integer dereferencedNumeric = getNumberToken(dereferenced);
                     if (dereferencedNumeric == null) {
                         final Register dereferencedRegister = Register.parse(dereferenced.toLowerCase());
                         if (dereferencedRegister != null) {
                             return new RegisterDereferencedOperand(dereferencedRegister);
                         } else {
-                            throw new ParserException("Could not parse \"" + token + "\" as operand", tokenizer);
+                            if (dereferenced.contains("+") || dereferenced.contains("-")) {
+                                final String[] parts = dereferenced.split("[\\+\\-]");
+                                final boolean plusOperator = dereferenced.contains("+");
+                                String registerRaw;
+                                int numericPart;
+                                Integer numericPart1 = getNumberToken(parts[0].trim());
+                                Integer numericPart2 = getNumberToken(parts[1].trim());
+                                if (numericPart1 != null && numericPart2 != null) {
+                                    //both numeric - so arithmetic operation ;)
+                                    int total = numericPart1 + (plusOperator ? +1 : -1 * numericPart2);
+                                    return new AddressDereferencedOperand(total);
+                                } else
+                                    if (numericPart1 == null) {
+                                        registerRaw = parts[0].trim();
+                                        numericPart = numericPart2;
+                                    } else {
+                                        registerRaw = parts[1].trim();
+                                        numericPart = numericPart1;
+                                    }
+                                
+                                final Register registerPart = Register.parse(registerRaw);
+                                if (registerPart != null) {
+                                    return new RegisterDereferencedAddNextWordOperand(registerPart, 
+                                            (plusOperator ? +1 : -1) * numericPart);
+                                } else {
+                                    throw new ParserException("Register \"" + registerRaw + "\" is unknown", tokenizer);
+                                }
+                            } else {
+                                return new JumpMarkDereferencedOperand(dereferenced);
+                            }
                         }
                     } else {
-                        return new RamDereferencedOperand(dereferencedNumeric);
+                        return new AddressDereferencedOperand(dereferencedNumeric);
                     }
-                } else {
-                    return new JumpMarkOperand(token);
-                }
+                } else
+                    if (operand.equals("push") || operand.equals("POP")) {
+                        return new PushPopOperand();
+                    } else 
+                        if (operand.equals("pick")) {
+                            return new PickNOperand();
+                        } else {
+                            return new JumpMarkOperand(token);
+                        }
 
         } else {
             //number (literal)

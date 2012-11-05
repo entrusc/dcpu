@@ -26,11 +26,20 @@ import de.darkblue.dcpu.parser.instructions.Operand;
 public class JumpMarkOperand implements Operand {
     
     private final String jumpMarking;
+    private Operand literalOperand;
 
     public JumpMarkOperand(String jumpMarking) {
         this.jumpMarking = jumpMarking;
     }
-
+    
+    public String getJumpMarking() {
+        return jumpMarking;
+    }
+    
+    public void resolveMarking(int address) {
+        literalOperand = new LiteralOperand(address);
+    }
+    
     @Override
     public String toString() {
         return jumpMarking;
@@ -38,6 +47,16 @@ public class JumpMarkOperand implements Operand {
 
     @Override
     public int getOperandCode() {
+        return literalOperand.getOperandCode();
+    }
+
+    @Override
+    public boolean hasAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getAdditionalWord() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

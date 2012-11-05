@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -35,9 +37,10 @@ public class Tokenizer {
     private final String rawCode;
     
     private final char lineCommentChar;
-    private final Set<Character> splitChars = new HashSet<Character>();
+    private final Set<Character> splitChars = new HashSet<>();
     
-    private List<Token> tokenHistory = new ArrayList<Token>();
+    private final List<Token> tokenHistory = new ArrayList<>();
+    private final Map<Character, JoinChars> joinCharsMap = new HashMap<>();
     private int tokenHistoryPosition = -1;
     
     private int lineNo, colNo;
@@ -52,6 +55,19 @@ public class Tokenizer {
             this.splitChars.add(keyWord);
         }
         readToken();
+    }
+    
+    /**
+     * registers a pair of chars where every char from the beginning to the ending
+     * is wrapped together as one token. For example giving '[' and ']' would tokenize
+     * [bla 123] as one token whereas without the registration it would result in
+     * the tokens "[bla" and "123]".
+     * 
+     * @param startChar
+     * @param endChar 
+     */
+    public void registerJoinChars(char startChar, char endChar) {
+        joinCharsMap.put(startChar, new JoinChars(startChar, endChar));
     }
 
     public void pushBack() {
@@ -103,11 +119,22 @@ public class Tokenizer {
         int startPosition = position;
         int startLine = lineNo;
         int startCol = colNo;
+        JoinChars joinChars = null;
         
-        while (c > 32) {
+        while (c > 32 || joinChars != null) {
             if (c == lineCommentChar) {
                 c = readComment();
                 continue;
+            }
+            
+            if (joinChars != null) {
+                if (((char)c) == joinChars.getEndChar()) {
+                    joinChars = null;
+                }
+            }
+            
+            if (joinChars == null) {
+                joinChars = this.joinCharsMap.get((char) c);
             }
             
             if (splitChars.contains((char) c)) {
@@ -119,6 +146,7 @@ public class Tokenizer {
             c = reader.read();
             charsRead++;
             updatePosition(c);
+            
         }
         
         boolean readAnything = false;
@@ -275,6 +303,25 @@ public class Tokenizer {
         public StringToken(String token, int position, int lineNo, int colNo) {
             super(position, lineNo, colNo);
             this.token = token;
+        }
+        
+    }
+    
+    private static class JoinChars {
+        private final char startChar;
+        private final char endChar;
+
+        public JoinChars(char startChar, char endChar) {
+            this.startChar = startChar;
+            this.endChar = endChar;
+        }
+
+        public char getStartChar() {
+            return startChar;
+        }
+        
+        public char getEndChar() {
+            return endChar;
         }
         
     }

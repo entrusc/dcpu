@@ -23,16 +23,40 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger <f.frankenberger@darkblue.de>
  */
-public class RamDereferencedOperand implements Operand {
+public class JumpMarkDereferencedOperand implements Operand {
+    
+    private final String jumpMarking;
+    private Operand literalOperand;
 
-    private final int ramAddress;
-
-    public RamDereferencedOperand(int ramAddress) {
-        this.ramAddress = ramAddress;
+    public JumpMarkDereferencedOperand(String jumpMarking) {
+        this.jumpMarking = jumpMarking;
+    }
+    
+    public String getJumpMarking() {
+        return jumpMarking;
+    }
+    
+    public void resolveMarking(int address) {
+        literalOperand = new AddressDereferencedOperand(address);
     }
     
     @Override
+    public String toString() {
+        return "[" + jumpMarking + "]";
+    }
+
+    @Override
     public int getOperandCode() {
+        return literalOperand.getOperandCode();
+    }
+
+    @Override
+    public boolean hasAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getAdditionalWord() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

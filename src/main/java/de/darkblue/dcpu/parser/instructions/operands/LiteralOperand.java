@@ -40,5 +40,15 @@ public class LiteralOperand implements Operand {
     public int getOperandCode() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public boolean hasAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
     
 }

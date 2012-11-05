@@ -25,4 +25,20 @@ public interface Operand {
     
     int getOperandCode();
     
+    /**
+     * returns true if this operand has
+     * data for an additional word
+     * 
+     * @return 
+     */
+    boolean hasAdditionalWord();
+    
+    /**
+     * returns an additional word if
+     * available
+     * 
+     * @return 
+     */
+    int getAdditionalWord();
+    
 }

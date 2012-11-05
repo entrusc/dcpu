@@ -18,6 +18,11 @@
 package de.darkblue.dcpu.parser;
 
 import de.darkblue.dcpu.parser.instructions.Instruction;
+import de.darkblue.dcpu.parser.instructions.Operand;
+import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,9 +68,44 @@ public class DCPUCode {
     /**
      * resolves all jump marking to literal code positions
      */
-    public void resolveJumpMarkings() {
+    public void resolveJumpMarkings() throws SemanticException {
         for (Instruction instruction : instructions) {
+            final Operand operandA = instruction.getOperandA();
+            resolveJumpMarking(operandA);
             
+            final Operand operandB = instruction.getOperandB();
+            if (operandB != null) {
+                resolveJumpMarking(operandB);
+            }
+        }
+    }
+    
+    private void resolveJumpMarking(Operand operand) throws SemanticException {
+        if (operand instanceof JumpMarkOperand) {
+            final JumpMarkOperand jumpMarkOperand = (JumpMarkOperand) operand;
+            final String jumpMarking = jumpMarkOperand.getJumpMarking();
+            final Integer jumpMarkAddress = this.jumpMarkings.get(jumpMarking);
+
+            if (jumpMarkAddress == null) {
+                throw new SemanticException("Label \"" + jumpMarking + "\" is not defined.");
+            } else {
+                jumpMarkOperand.resolveMarking(jumpMarkAddress);
+            }
+        } else {
+            
+        }
+    }
+    
+    public void store(OutputStream out) throws IOException, SemanticException {
+        resolveJumpMarkings();
+
+        try {
+            DataOutputStream dataOut = new DataOutputStream(out);
+            for (Instruction instruction : instructions) {
+                instruction.store(dataOut);
+            }
+        } finally {
+            out.close();
         }
     }
 

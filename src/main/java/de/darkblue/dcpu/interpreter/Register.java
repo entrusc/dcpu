@@ -29,7 +29,10 @@ public enum Register {
     Y, 
     Z, 
     I, 
-    J;
+    J,
+    PC,
+    SP,
+    EX;
     
     public static Register parse(String raw) {
         raw = raw.toLowerCase();

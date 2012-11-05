@@ -18,6 +18,7 @@
 package de.darkblue.dcpu.parser.instructions.operands;
 
 import de.darkblue.dcpu.interpreter.Register;
+import de.darkblue.dcpu.parser.SemanticException;
 import de.darkblue.dcpu.parser.instructions.Operand;
 
 /**
@@ -29,8 +30,14 @@ public class RegisterDereferencedOperand implements Operand {
     
     private final Register register;
     
-    public RegisterDereferencedOperand(Register register) {
+    public RegisterDereferencedOperand(Register register) throws SemanticException {
         this.register = register;
+        if (this.register == Register.PC) {
+            throw new SemanticException("[PC] is not allowed");
+        }
+        if (this.register == Register.EX) {
+            throw new SemanticException("[EX] is not allowed");
+        }
     }
 
     @Override
@@ -57,10 +64,22 @@ public class RegisterDereferencedOperand implements Operand {
                 return 0x0E;
             case J:
                 return 0x0F;
+            case SP:
+                return 0x19;
             default:
                 throw new IllegalArgumentException("operand code of register " 
                         + this.register.name() + " is unknown");
         }
+    }
+
+    @Override
+    public boolean hasAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int getAdditionalWord() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
     
 }
