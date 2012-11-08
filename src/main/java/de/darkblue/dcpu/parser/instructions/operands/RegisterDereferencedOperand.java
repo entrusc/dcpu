@@ -38,6 +38,9 @@ public class RegisterDereferencedOperand extends Operand {
         if (this.register == Register.EX) {
             throw new SemanticException("[EX] is not allowed");
         }
+        if (this.register == Register.IA) {
+            throw new SemanticException("[IA] is not allowed");
+        }
     }
 
     @Override

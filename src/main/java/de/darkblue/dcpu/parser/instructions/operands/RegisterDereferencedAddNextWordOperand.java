@@ -39,6 +39,9 @@ public class RegisterDereferencedAddNextWordOperand extends Operand {
         if (register == Register.PC) {
             throw new SemanticException("[PC + " + value + "] is not specified");
         }
+        if (register == Register.IA) {
+            throw new SemanticException("[IA + " + value + "] is not specified");
+        }
     }
     
     @Override

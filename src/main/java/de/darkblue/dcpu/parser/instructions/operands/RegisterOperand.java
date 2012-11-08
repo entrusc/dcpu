@@ -18,6 +18,7 @@
 package de.darkblue.dcpu.parser.instructions.operands;
 
 import de.darkblue.dcpu.interpreter.Register;
+import de.darkblue.dcpu.parser.SemanticException;
 import de.darkblue.dcpu.parser.instructions.Operand;
 
 /**
@@ -29,8 +30,12 @@ public class RegisterOperand extends Operand {
     
     private final Register register;
     
-    public RegisterOperand(Register register) {
+    public RegisterOperand(Register register) throws SemanticException {
         this.register = register;
+        switch (register) {
+            case IA:
+                throw new SemanticException("IA can't be accessed directly");
+        }
     }
 
     @Override

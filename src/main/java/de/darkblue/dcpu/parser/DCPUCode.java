@@ -118,18 +118,18 @@ public class DCPUCode {
             if (instruction.getOpcode().getParameterCount() == 1) {
                 if (instruction.getOperandA().hasAdditionalWord()) {
                     Word word = new Word();
-                    word.setInt(instruction.getOperandA().getAdditionalWord());
+                    word.setSignedInt(instruction.getOperandA().getAdditionalWord());
                     word.store(dataOut);
                 }
             } else {
                 if (instruction.getOperandB().hasAdditionalWord()) {
                     Word word = new Word();
-                    word.setInt(instruction.getOperandB().getAdditionalWord());
+                    word.setSignedInt(instruction.getOperandB().getAdditionalWord());
                     word.store(dataOut);
                 }
                 if (instruction.getOperandA().hasAdditionalWord()) {
                     Word word = new Word();
-                    word.setInt(instruction.getOperandA().getAdditionalWord());
+                    word.setSignedInt(instruction.getOperandA().getAdditionalWord());
                     word.store(dataOut);
                 }
             }
