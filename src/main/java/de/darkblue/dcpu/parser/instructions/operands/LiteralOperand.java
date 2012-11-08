@@ -23,7 +23,7 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class LiteralOperand implements Operand {
+public class LiteralOperand extends Operand {
 
     private final int value;
     
@@ -38,17 +38,23 @@ public class LiteralOperand implements Operand {
 
     @Override
     public int getOperandCode() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (hasAdditionalWord()) {
+            return 0x1f; //literal in next word
+        } else {
+            return 0x20 + (value + 1); //directly stored in operand code
+        }
     }
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        //values -1 .. 30 are stored directly in the instruction (if operand is operand A)
+        //otherwise the value is stored in an additional word
+        return (operandMode == OperandMode.MODE_OPERAND_A && value >= -1 && value <= 30);
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return value;
     }
     
 }

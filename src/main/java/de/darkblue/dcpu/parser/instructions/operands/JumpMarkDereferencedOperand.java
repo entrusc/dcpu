@@ -23,19 +23,20 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class JumpMarkDereferencedOperand implements Operand {
+public class JumpMarkDereferencedOperand extends JumpMarkOperand {
     
-    private final String jumpMarking;
     private Operand literalOperand;
 
     public JumpMarkDereferencedOperand(String jumpMarking) {
-        this.jumpMarking = jumpMarking;
+        super(jumpMarking);
     }
     
+    @Override
     public String getJumpMarking() {
         return jumpMarking;
     }
     
+    @Override
     public void resolveMarking(int address) {
         literalOperand = new AddressDereferencedOperand(address);
     }
@@ -52,12 +53,12 @@ public class JumpMarkDereferencedOperand implements Operand {
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return literalOperand.hasAdditionalWord();
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return literalOperand.getAdditionalWord();
     }
     
 }

@@ -19,6 +19,7 @@ package de.darkblue.dcpu.parser;
 
 import de.darkblue.dcpu.parser.instructions.Instruction;
 import de.darkblue.dcpu.parser.instructions.Operand;
+import de.darkblue.dcpu.parser.instructions.Word;
 import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -36,6 +37,7 @@ public class DCPUCode {
     
     private List<Instruction> instructions = new ArrayList<>();
     private Map<String, Integer> jumpMarkings = new HashMap<>();
+    private Map<Integer, String> jumpMarkingsReverse = new HashMap<>();
 
     public DCPUCode() {
     }
@@ -52,17 +54,19 @@ public class DCPUCode {
      * @param label 
      */
     public void addJumpMarking(String label) {
-        this.jumpMarkings.put(label, this.instructions.size());
+        int codePosition = this.instructions.size();
+        this.addJumpMarking(codePosition, label);
     }
     
     /**
      * sets a jumpmarking at the given position
      * 
-     * @param pos
+     * @param codePosition
      * @param label 
      */
-    public void addJumpMarking(int pos, String label) {
-        this.jumpMarkings.put(label, pos);
+    public void addJumpMarking(int codePosition, String label) {
+        this.jumpMarkings.put(label, codePosition);
+        this.jumpMarkingsReverse.put(codePosition, label);
     }
     
     /**
@@ -96,16 +100,39 @@ public class DCPUCode {
         }
     }
     
+    /**
+     * stores this DCPUCode binary in an output stream.
+     * 
+     * @param out
+     * @throws IOException
+     * @throws SemanticException 
+     */
     public void store(OutputStream out) throws IOException, SemanticException {
         resolveJumpMarkings();
 
-        try {
-            DataOutputStream dataOut = new DataOutputStream(out);
-            for (Instruction instruction : instructions) {
-                instruction.store(dataOut);
+        DataOutputStream dataOut = new DataOutputStream(out);
+        for (Instruction instruction : instructions) {
+            instruction.store(dataOut);
+
+            //store possible additional parameters
+            if (instruction.getOpcode().getParameterCount() == 1) {
+                if (instruction.getOperandA().hasAdditionalWord()) {
+                    Word word = new Word();
+                    word.setInt(instruction.getOperandA().getAdditionalWord());
+                    word.store(dataOut);
+                }
+            } else {
+                if (instruction.getOperandB().hasAdditionalWord()) {
+                    Word word = new Word();
+                    word.setInt(instruction.getOperandB().getAdditionalWord());
+                    word.store(dataOut);
+                }
+                if (instruction.getOperandA().hasAdditionalWord()) {
+                    Word word = new Word();
+                    word.setInt(instruction.getOperandA().getAdditionalWord());
+                    word.store(dataOut);
+                }
             }
-        } finally {
-            out.close();
         }
     }
 
@@ -114,7 +141,11 @@ public class DCPUCode {
         StringBuilder sb = new StringBuilder();
         int lineNo = 0;
         for (Instruction instruction : instructions) {
-            sb.append(String.format("%04d\t%s\n", lineNo++, instruction.toString()));
+            final String line = instruction.toString();
+            final String jumpLabel = this.jumpMarkingsReverse.containsKey(lineNo) 
+                    ? this.jumpMarkingsReverse.get(lineNo) + ":"
+                    : "";
+            sb.append(String.format("%04d\t%20s\t%s\n", lineNo++, jumpLabel, line));
         }
         return sb.toString();
     }

@@ -26,7 +26,7 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  * 
  * @author Florian Frankenberger
  */
-public class RegisterDereferencedOperand implements Operand {
+public class RegisterDereferencedOperand extends Operand {
     
     private final Register register;
     
@@ -74,12 +74,12 @@ public class RegisterDereferencedOperand implements Operand {
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return false;
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("No additional word.");
     }
     
 }

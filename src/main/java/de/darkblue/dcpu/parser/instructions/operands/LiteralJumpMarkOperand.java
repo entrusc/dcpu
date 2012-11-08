@@ -23,32 +23,42 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class AddressDereferencedOperand extends Operand {
+public class LiteralJumpMarkOperand extends JumpMarkOperand {
+    
+    private Operand literalOperand;
 
-    private final int address;
-
-    public AddressDereferencedOperand(int address) {
-        this.address = address;
+    public LiteralJumpMarkOperand(String jumpMarking) {
+        super(jumpMarking);
     }
     
     @Override
-    public int getOperandCode() {
-        return 0x1e;
+    public String getJumpMarking() {
+        return jumpMarking;
+    }
+    
+    @Override
+    public void resolveMarking(int address) {
+        literalOperand = new LiteralOperand(address);
+    }
+    
+    @Override
+    public String toString() {
+        return jumpMarking;
     }
 
     @Override
-    public String toString() {
-        return "[" + address + "]";
+    public int getOperandCode() {
+        return literalOperand.getOperandCode();
     }
 
     @Override
     public boolean hasAdditionalWord() {
-        return true; //always stored in next word
+        return literalOperand.hasAdditionalWord();
     }
 
     @Override
     public int getAdditionalWord() {
-        return address;
+        return literalOperand.getAdditionalWord();
     }
     
 }

@@ -21,9 +21,29 @@ package de.darkblue.dcpu.parser.instructions;
  *
  * @author Florian Frankenberger
  */
-public interface Operand {
+public abstract class Operand {
     
-    int getOperandCode();
+    protected OperandMode operandMode;
+    
+    public enum OperandMode {
+        MODE_OPERAND_A,
+        MODE_OPERAND_B
+    }
+    
+    /**
+     * set by the parser according to if this used as operand
+     * A or as operand B
+     * @param operandMode 
+     */
+    public void setOperandMode(OperandMode operandMode) {
+        this.operandMode = operandMode;
+    }
+    
+    /**
+     * returns this operand's code
+     * @return 
+     */
+    public abstract int getOperandCode();
     
     /**
      * returns true if this operand has
@@ -31,7 +51,7 @@ public interface Operand {
      * 
      * @return 
      */
-    boolean hasAdditionalWord();
+    public abstract boolean hasAdditionalWord();
     
     /**
      * returns an additional word if
@@ -39,6 +59,6 @@ public interface Operand {
      * 
      * @return 
      */
-    int getAdditionalWord();
+    public abstract int getAdditionalWord();
     
 }

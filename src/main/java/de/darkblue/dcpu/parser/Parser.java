@@ -26,7 +26,7 @@ import de.darkblue.dcpu.parser.instructions.operands.PickNOperand;
 import de.darkblue.dcpu.parser.instructions.operands.PushPopOperand;
 import de.darkblue.dcpu.parser.instructions.operands.AddressDereferencedOperand;
 import de.darkblue.dcpu.parser.instructions.operands.JumpMarkDereferencedOperand;
-import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
+import de.darkblue.dcpu.parser.instructions.operands.LiteralJumpMarkOperand;
 import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedAddNextWordOperand;
 import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedOperand;
 import de.darkblue.dcpu.parser.instructions.operands.RegisterOperand;
@@ -193,9 +193,15 @@ public class Parser {
                         return new PushPopOperand();
                     } else 
                         if (operand.equals("pick")) {
-                            return new PickNOperand();
+                            final String nextToken = getNextToken();
+                            final Integer nextTokenNumeric = getNumberToken(nextToken);
+                            if (nextToken == null) {
+                                throw new ParserException("PICK awaits one additional numeric parameter", tokenizer);
+                            } else {
+                                return new PickNOperand(nextTokenNumeric);
+                            }
                         } else {
-                            return new JumpMarkOperand(token);
+                            return new LiteralJumpMarkOperand(token);
                         }
 
         } else {
@@ -255,15 +261,5 @@ public class Parser {
        return found;
     }
     
-    private static Instruction newInstance(Class<Instruction> instruction) {
-        try {
-            return instruction.newInstance();
-        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException ex) {
-            throw new IllegalStateException("Problem instantiating a instruction", ex);
-        }
-    }
-
-
-
     
 }

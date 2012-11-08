@@ -23,7 +23,7 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class PeekOperand implements Operand {
+public class PeekOperand extends Operand {
 
     @Override
     public int getOperandCode() {
@@ -32,12 +32,17 @@ public class PeekOperand implements Operand {
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return false;
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("has no additional word.");
     }
 
+    @Override
+    public String toString() {
+        return "PEEK";
+    }
+    
 }

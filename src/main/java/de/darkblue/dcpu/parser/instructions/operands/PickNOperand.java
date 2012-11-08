@@ -23,8 +23,14 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class PickNOperand implements Operand {
+public class PickNOperand extends Operand {
 
+    private final int n;
+
+    public PickNOperand(int n) {
+        this.n = n;
+    }
+    
     @Override
     public int getOperandCode() {
         return 0x1a;
@@ -32,12 +38,19 @@ public class PickNOperand implements Operand {
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return true;
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return n;
     }
 
+    @Override
+    public String toString() {
+        return "PICK " + n;
+    }
+
+    
+    
 }

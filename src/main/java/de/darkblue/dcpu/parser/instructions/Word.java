@@ -44,6 +44,14 @@ public class Word {
         this.word |= ((instruction.getOperandA().getOperandCode() & 0b0011_1111) << 10);
     }
     
+    public void setInt(int integer) {
+        if (integer < 0) {
+            word = ~(Math.abs(integer) & 0b01111111111111111) + 1;
+        } else {
+            word = integer & 0b01111111111111111;
+        }
+    }
+    
     public void store(DataOutputStream dataOut) throws IOException {
         dataOut.writeShort(word);
     }

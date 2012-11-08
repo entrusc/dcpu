@@ -25,7 +25,7 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class RegisterDereferencedAddNextWordOperand implements Operand {
+public class RegisterDereferencedAddNextWordOperand extends Operand {
 
     private final Register register;
     private final int value;
@@ -43,7 +43,28 @@ public class RegisterDereferencedAddNextWordOperand implements Operand {
     
     @Override
     public int getOperandCode() {
-        throw new UnsupportedOperationException();
+        switch (this.register) {
+            case A:
+                return 0x08;
+            case B:
+                return 0x09;
+            case C:
+                return 0x0A;
+            case X:
+                return 0x0B;
+            case Y:
+                return 0x0C;
+            case Z:
+                return 0x0D;
+            case I:
+                return 0x0E;
+            case J:
+                return 0x0F;
+            case SP:
+                return 0x19;
+            default:
+                throw new IllegalArgumentException("Register " + this.register + " is unknown");
+        }
     }
 
     @Override
@@ -53,12 +74,12 @@ public class RegisterDereferencedAddNextWordOperand implements Operand {
 
     @Override
     public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return true; //always stored in next word
     }
 
     @Override
     public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return value;
     }
 
 }

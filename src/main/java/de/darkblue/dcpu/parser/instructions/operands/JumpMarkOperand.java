@@ -14,7 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package de.darkblue.dcpu.parser.instructions.operands;
 
 import de.darkblue.dcpu.parser.instructions.Operand;
@@ -23,41 +22,18 @@ import de.darkblue.dcpu.parser.instructions.Operand;
  *
  * @author Florian Frankenberger
  */
-public class JumpMarkOperand implements Operand {
-    
-    private final String jumpMarking;
-    private Operand literalOperand;
+public abstract class JumpMarkOperand extends Operand {
+
+    protected final String jumpMarking;
 
     public JumpMarkOperand(String jumpMarking) {
         this.jumpMarking = jumpMarking;
     }
     
     public String getJumpMarking() {
-        return jumpMarking;
-    }
-    
-    public void resolveMarking(int address) {
-        literalOperand = new LiteralOperand(address);
-    }
-    
-    @Override
-    public String toString() {
-        return jumpMarking;
+        return this.jumpMarking;
     }
 
-    @Override
-    public int getOperandCode() {
-        return literalOperand.getOperandCode();
-    }
-
-    @Override
-    public boolean hasAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public int getAdditionalWord() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    public abstract void resolveMarking(int address);
     
 }
