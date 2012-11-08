@@ -24,7 +24,7 @@ import java.util.Map;
  *
  * @author Florian Frankenberger
  */
-public enum Opcode {
+public enum Operation {
     SET(0x01, 2),
     ADD(0x02, 2),
     SUB(0x03, 2),
@@ -63,16 +63,16 @@ public enum Opcode {
     HWQ(0x11, 1),
     HWI(0x12, 1);
     
-    private static final Map<String, Opcode> OPCODE_LOOKUP = new HashMap<>();
+    private static final Map<String, Operation> OERATION_LOOKUP = new HashMap<>();
     static {
-        for (Opcode opcode : Opcode.values()) {
-            OPCODE_LOOKUP.put(opcode.name().toLowerCase(), opcode);
+        for (Operation operation : Operation.values()) {
+            OERATION_LOOKUP.put(operation.name().toLowerCase(), operation);
         }
     }
     private final int opcode;
     private final int parameterCount;
 
-    private Opcode(int opcode, int parameterCount) {
+    private Operation(int opcode, int parameterCount) {
         this.opcode = opcode;
         this.parameterCount = parameterCount;
     }
@@ -85,8 +85,8 @@ public enum Opcode {
         return parameterCount;
     }
 
-    public static Opcode parse(String raw) {
-        return OPCODE_LOOKUP.get(raw.toLowerCase());
+    public static Operation parse(String raw) {
+        return OERATION_LOOKUP.get(raw.toLowerCase());
     }
 
     @Override

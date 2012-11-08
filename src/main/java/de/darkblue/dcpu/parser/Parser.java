@@ -17,9 +17,10 @@
 
 package de.darkblue.dcpu.parser;
 
+import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Instruction;
-import de.darkblue.dcpu.parser.instructions.Opcode;
+import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Operand;
 import de.darkblue.dcpu.parser.instructions.operands.LiteralOperand;
 import de.darkblue.dcpu.parser.instructions.operands.PickNOperand;
@@ -32,7 +33,11 @@ import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedOperand
 import de.darkblue.dcpu.parser.instructions.operands.RegisterOperand;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+import org.reflections.Reflections;
 
 /**
  *
@@ -83,7 +88,7 @@ public class Parser {
     }
     
     private void parseInstruction(DCPUCode code) throws ParserException, IOException, SemanticException {
-        final Opcode opcode = parseOpcode();
+        final Operation operation = parseOperation();
 
         Operand firstOperand = parseOperand();
         if (firstOperand == null) {
@@ -99,22 +104,22 @@ public class Parser {
 
         //now we check if the actual instruction really awaits this amount
         //of operands (= syntax check)
-        final Instruction instruction = new Instruction(opcode);
+        final Instruction instruction = new Instruction(operation);
         if (firstOperand != null && secondOperand != null) {
-            if (opcode.getParameterCount() != 2) {
+            if (operation.getParameterCount() != 2) {
                 tokenizer.pushBack();
-                throw new ParserException("Instruction \"" + opcode + "\" requires " 
-                        + opcode.getParameterCount() + " parameters but found only 2", tokenizer);
+                throw new ParserException("Instruction \"" + operation + "\" requires " 
+                        + operation.getParameterCount() + " parameters but found only 2", tokenizer);
             }
 
             //with two parameters the order is reversed: OPC b, a
             instruction.setOperandA(secondOperand);
             instruction.setOperandB(firstOperand);
         } else {
-            if (opcode.getParameterCount() != 1) {
+            if (operation.getParameterCount() != 1) {
                 tokenizer.pushBack();
-                throw new ParserException("Instruction \"" + opcode + "\" requires " 
-                        + opcode.getParameterCount() + " parameters but found only 1", tokenizer);
+                throw new ParserException("Instruction \"" + operation + "\" requires " 
+                        + operation.getParameterCount() + " parameters but found only 1", tokenizer);
             }
             //with one parameter we have just: OPC a
             instruction.setOperandA(firstOperand);
@@ -123,15 +128,15 @@ public class Parser {
         code.addInstruction(instruction);
     }    
     
-    private Opcode parseOpcode() throws IOException, ParserException {
+    private Operation parseOperation() throws IOException, ParserException {
         final String token = getNextToken();
         
-        final Opcode opcode = Opcode.parse(token);
-        if (opcode == null) {
-            throw new ParserException("Opcode \"" + token + "\" is unknown", tokenizer);
+        final Operation operation = Operation.parse(token);
+        if (operation == null) {
+            throw new ParserException("Operation \"" + token + "\" is unknown", tokenizer);
         }
         
-        return opcode;
+        return operation;
     }
     
     private Operand parseOperand() throws IOException, ParserException, SemanticException {

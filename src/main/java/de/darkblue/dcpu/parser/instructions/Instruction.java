@@ -26,17 +26,17 @@ import java.io.IOException;
  */
 public class Instruction {
     
-    private Opcode opcode;
+    private Operation operation;
     
     private Operand operandA;
     private Operand operandB;
     
-    public Instruction(Opcode opcode) {
-        this.opcode = opcode;
+    public Instruction(Operation opcode) {
+        this.operation = opcode;
     }
 
-    public Opcode getOpcode() {
-        return opcode;
+    public Operation getOperation() {
+        return operation;
     }
     
     public void setOperandA(Operand operandA) {
@@ -60,8 +60,8 @@ public class Instruction {
     @Override
     public String toString() {
         String operand = "[unknown]";
-        if (opcode != null) {
-            operand = opcode.toString();
+        if (operation != null) {
+            operand = operation.toString();
         }
         
         if (operandB != null) {

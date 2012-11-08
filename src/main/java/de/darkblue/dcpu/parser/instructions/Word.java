@@ -68,7 +68,7 @@ public class Word {
     }
     
     public void setInstruction(Instruction instruction) {
-        final Opcode opcode = instruction.getOpcode();
+        final Operation opcode = instruction.getOperation();
         if (opcode == null) {
             throw new IllegalArgumentException("The passed instruction needs to have an opcode");
         }

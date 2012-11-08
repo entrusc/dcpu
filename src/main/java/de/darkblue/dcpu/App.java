@@ -17,25 +17,20 @@
 
 package de.darkblue.dcpu;
 
-import de.darkblue.dcpu.parser.DCPUCode;
-import de.darkblue.dcpu.parser.Parser;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.OutputStream;
+import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
 
 public class App {
     
     public static void main(String[] args) throws Exception {
-        Parser parser = new Parser(new FileReader("D:/temp/test.dcpu"));
-        DCPUCode code = parser.parse();
-        
-        System.out.println(code);
-        File compiledFile = new File("D:/temp/test.out");
-        try (OutputStream out = new FileOutputStream(compiledFile)) {
-            code.store(out);
-        }
-        
+//        Parser parser = new Parser(new FileReader("D:/temp/test.dcpu"));
+//        DCPUCode code = parser.parse();
+//        
+//        System.out.println(code);
+//        File compiledFile = new File("D:/temp/test.out");
+//        try (OutputStream out = new FileOutputStream(compiledFile)) {
+//            code.store(out);
+//        }
+//        
         
     }
     

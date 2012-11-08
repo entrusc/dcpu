@@ -115,7 +115,7 @@ public class DCPUCode {
             instruction.store(dataOut);
 
             //store possible additional parameters
-            if (instruction.getOpcode().getParameterCount() == 1) {
+            if (instruction.getOperation().getParameterCount() == 1) {
                 if (instruction.getOperandA().hasAdditionalWord()) {
                     Word word = new Word();
                     word.setSignedInt(instruction.getOperandA().getAdditionalWord());
