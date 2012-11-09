@@ -14,45 +14,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.darkblue.dcpu.interpreter.operands;
+
+package de.darkblue.dcpu.interpreter.instructions;
 
 import de.darkblue.dcpu.interpreter.Command;
 import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 
 /**
- *
+ * SET command
  * @author Florian Frankenberger
  */
-public abstract class Operand {
-    
-    public static enum OperandMode {
-        MODE_OPERAND_A,
-        MODE_OPERAND_B
-    }
-    
-    protected int value;
+@InstructionDefinition(operation=Operation.SET)
+public class SetInstruction extends Instruction {
 
-    public void setValue(int value) {
-        this.value = value;
+    @Override
+    public Command[] execute(final Word... operands) {
+        return new Command[] {
+            new Command() {
+
+                @Override
+                public void execute(DCPU dcpu) {
+                    operands[0].set(operands[1]);
+                }
+                
+            }
+        };
     }
-    
-    /**
-     * returns the memory cell that is designated by
-     * this operand either to set or read from
-     * 
-     * @param dcpu the dcpu interpreter
-     * @param mode determines if this operand is A or B
-     * @return 
-     */
-    public abstract Word getMemoryCell(DCPU dcpu, OperandMode mode);
-    
-    /**
-     * returns an possible additional command that is
-     * executed right after(!) the getMemoryCell call
-     * 
-     * @return 
-     */
-    public abstract Command additionalCommand();
     
 }

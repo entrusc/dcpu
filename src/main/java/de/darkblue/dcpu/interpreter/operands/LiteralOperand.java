@@ -14,45 +14,42 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package de.darkblue.dcpu.interpreter.operands;
 
 import de.darkblue.dcpu.interpreter.Command;
 import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.interpreter.NopCommand;
 import de.darkblue.dcpu.parser.instructions.Word;
 
 /**
  *
  * @author Florian Frankenberger
  */
-public abstract class Operand {
-    
-    public static enum OperandMode {
-        MODE_OPERAND_A,
-        MODE_OPERAND_B
-    }
-    
-    protected int value;
+@OperandDefinition(operandCodes={0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 
+    0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 
+    0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F})
+public class LiteralOperand extends Operand {
 
-    public void setValue(int value) {
-        this.value = value;
+    @Override
+    public Word getMemoryCell(DCPU dcpu, OperandMode mode) {
+        if (this.value == 0x1f) {
+            dcpu.getPc().inc();
+            return dcpu.getRam(dcpu.getPc());
+        } else {
+            final Word word = new Word();
+            word.setSignedInt(value - 0x21);
+            return word;
+        }
     }
-    
-    /**
-     * returns the memory cell that is designated by
-     * this operand either to set or read from
-     * 
-     * @param dcpu the dcpu interpreter
-     * @param mode determines if this operand is A or B
-     * @return 
-     */
-    public abstract Word getMemoryCell(DCPU dcpu, OperandMode mode);
-    
-    /**
-     * returns an possible additional command that is
-     * executed right after(!) the getMemoryCell call
-     * 
-     * @return 
-     */
-    public abstract Command additionalCommand();
-    
+
+    @Override
+    public Command additionalCommand() {
+        if (this.value == 0x1f) {
+            return new NopCommand(); // +1 for reading the next word
+        } else {
+            return null;
+        }
+    }
+
 }

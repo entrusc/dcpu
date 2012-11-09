@@ -82,6 +82,29 @@ public class Word {
         this.word |= ((instruction.getOperandA().getOperandCode() & 0b0011_1111) << 10);
     }
     
+    public boolean hasTwoOperandsAsInstruction() {
+        return (this.word & 0b0000_0000_0001_1111) > 0;
+    }
+    
+    public int getOperationCode() {
+        if (this.hasTwoOperandsAsInstruction()) {
+            return this.word & 0b0000_0000_0001_1111;
+        } else {
+            return (this.word >> 5) & 0b0000_0000_0001_1111;
+        }
+    }
+    
+    public int getOperandA() {
+        return (this.word >> 10) & 0b0000_0000_0011_1111;
+    }
+    
+    public int getOperandB() {
+        if (!this.hasTwoOperandsAsInstruction()) {
+            throw new IllegalStateException("This word does not contain a second operand");
+        }
+        return (this.word >> 5) & 0b0000_0000_0001_1111;
+    }
+    
     public void setSignedInt(int integer) {
         if (integer < 0) {
             word = ~(Math.abs(integer) & 0b0111_1111_1111_11111) + 1;

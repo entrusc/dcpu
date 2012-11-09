@@ -47,7 +47,7 @@ public abstract class Instruction {
     
     /**
      * returns a list of commands each command will be executed
-     * by the interpreter
+     * by the interpreter and uses one CPU cycle to process
      * 
      * @param operands 1 or 2 operands depending on the operation
      * @return 

@@ -14,30 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.darkblue.dcpu.interpreter.instructions;
 
-import de.darkblue.dcpu.parser.instructions.Operation;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package de.darkblue.dcpu.interpreter;
 
 /**
- * Defines an instruction
- * 
+ * The No OPeration (NOP) command
  * @author Florian Frankenberger
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@Inherited
-public @interface InstructionDefinition {
-   
-    /**
-     * operation
-     * 
-     * @return 
-     */
-    Operation operation();
-        
+public class NopCommand implements Command {
+
+    @Override
+    public void execute(DCPU dcpu) {
+        //does nothing but uses up one cpu cycle
+    }
+
 }

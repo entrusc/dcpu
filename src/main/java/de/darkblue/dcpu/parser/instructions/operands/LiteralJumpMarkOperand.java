@@ -39,6 +39,7 @@ public class LiteralJumpMarkOperand extends JumpMarkOperand {
     @Override
     public void resolveMarking(int address) {
         literalOperand = new LiteralOperand(address);
+        literalOperand.setOperandMode(operandMode);
     }
     
     @Override

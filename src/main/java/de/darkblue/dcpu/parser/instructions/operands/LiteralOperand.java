@@ -49,7 +49,7 @@ public class LiteralOperand extends Operand {
     public boolean hasAdditionalWord() {
         //values -1 .. 30 are stored directly in the instruction (if operand is operand A)
         //otherwise the value is stored in an additional word
-        return (operandMode == OperandMode.MODE_OPERAND_A && value >= -1 && value <= 30);
+        return (operandMode == OperandMode.MODE_OPERAND_A && !(value >= -1 && value <= 30));
     }
 
     @Override

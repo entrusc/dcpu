@@ -46,7 +46,7 @@ public class Instruction {
     
     public void setOperandB(Operand operandB) {
         this.operandB = operandB;
-        this.operandA.setOperandMode(Operand.OperandMode.MODE_OPERAND_B);
+        this.operandB.setOperandMode(Operand.OperandMode.MODE_OPERAND_B);
     }
 
     public Operand getOperandA() {

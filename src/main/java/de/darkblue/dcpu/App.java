@@ -17,21 +17,33 @@
 
 package de.darkblue.dcpu;
 
-import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
+import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.interpreter.Register;
+import de.darkblue.dcpu.parser.DCPUCode;
+import de.darkblue.dcpu.parser.Parser;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
 
 public class App {
     
     public static void main(String[] args) throws Exception {
-//        Parser parser = new Parser(new FileReader("D:/temp/test.dcpu"));
-//        DCPUCode code = parser.parse();
-//        
-//        System.out.println(code);
-//        File compiledFile = new File("D:/temp/test.out");
-//        try (OutputStream out = new FileOutputStream(compiledFile)) {
-//            code.store(out);
-//        }
-//        
+        final String simpleASM = "SET A, 20";
         
+        Parser parser = new Parser(new StringReader(simpleASM));
+        DCPUCode code = parser.parse();
+        
+        System.out.println(code);
+        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+        code.store(byteOut);
+        
+        
+        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+        DCPU dcpu = new DCPU();
+        dcpu.readRam(byteIn);
+        dcpu.step();
+        
+        System.out.println(dcpu.getRegister(Register.A));
     }
     
 }

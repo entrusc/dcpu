@@ -122,14 +122,14 @@ public class DCPUCode {
                     word.store(dataOut);
                 }
             } else {
-                if (instruction.getOperandB().hasAdditionalWord()) {
-                    Word word = new Word();
-                    word.setSignedInt(instruction.getOperandB().getAdditionalWord());
-                    word.store(dataOut);
-                }
                 if (instruction.getOperandA().hasAdditionalWord()) {
                     Word word = new Word();
                     word.setSignedInt(instruction.getOperandA().getAdditionalWord());
+                    word.store(dataOut);
+                }
+                if (instruction.getOperandB().hasAdditionalWord()) {
+                    Word word = new Word();
+                    word.setSignedInt(instruction.getOperandB().getAdditionalWord());
                     word.store(dataOut);
                 }
             }

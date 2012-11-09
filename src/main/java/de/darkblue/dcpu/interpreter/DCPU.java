@@ -17,13 +17,23 @@
 
 package de.darkblue.dcpu.interpreter;
 
+import de.darkblue.dcpu.interpreter.instructions.Instruction;
+import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
+import de.darkblue.dcpu.interpreter.operands.Operand;
+import de.darkblue.dcpu.interpreter.operands.Operand.OperandMode;
+import de.darkblue.dcpu.interpreter.operands.OperandDefinition;
 import de.darkblue.dcpu.parser.instructions.Word;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.reflections.Reflections;
 
 /**
  * A simple DCPU-16 implementation based on notch's specification
@@ -33,9 +43,44 @@ import java.util.Map;
  */
 public class DCPU {
  
+    private static final String PACKAGE_INSTRUCTIONS = "de.darkblue.dcpu.interpreter.instructions";
+    private static final String PACKAGE_OPERANDS = "de.darkblue.dcpu.interpreter.operands";
+    
+    private static final Map<Integer, Class<? extends Instruction>> REGISTERED_INSTRUCTIONS = new HashMap<>();
+    private static final Map<Integer, Class<? extends Operand>> REGISTERED_OPERANDS = new HashMap<>();
+    
+    private static final long DEFAULT_HZ = 16_000_000; //16 MHz
+    
+    static {
+        final Reflections reflectionsInstructions = new Reflections(PACKAGE_INSTRUCTIONS);
+        Set<Class<? extends Instruction>> instructions = reflectionsInstructions.getSubTypesOf(Instruction.class);
+        for (Class<? extends Instruction> instruction : instructions) {
+            final InstructionDefinition defition = instruction.getAnnotation(InstructionDefinition.class);
+            if (defition != null) {
+                REGISTERED_INSTRUCTIONS.put(defition.operation().getOpcode(), instruction);
+            }
+        }
+        
+        final Reflections reflectionsOperands = new Reflections(PACKAGE_OPERANDS);
+        Set<Class<? extends Operand>> operands = reflectionsOperands.getSubTypesOf(Operand.class);
+        for (Class<? extends Operand> operand : operands) {
+            final OperandDefinition defition = operand.getAnnotation(OperandDefinition.class);
+            if (defition != null) {
+                for (int operandCode : defition.operandCodes()) {
+                    REGISTERED_OPERANDS.put(operandCode, operand);
+                }
+            }
+        }
+    }
+    
     private Word[] ram = new Word[0x10000];
     private Word[] lastReadProgram = new Word[0x10000];
     private Map<Register, Word> registers = new EnumMap<>(Register.class);
+    
+    private int cpuCycles = 0;
+    private long lastCommandExecution = 0L;
+    
+    private long timePerCycle = 1_000_000_000L / DEFAULT_HZ;
 
     public DCPU() {
         clearRam();
@@ -53,7 +98,7 @@ public class DCPU {
     }
     
     private void clearRegisters() {
-        for (Register register : registers.keySet()) {
+        for (Register register : Register.values()) {
             registers.put(register, Word.ZERO.clone());
         }
     }
@@ -83,7 +128,8 @@ public class DCPU {
             
             codePosition.inc();
         } catch (EOFException e) {
-            //i know bad style: condition by exception - but I have no choice here ...
+            //i know this is bad style: condition by 
+            //exception - but I have no choice here ...
         }        
     }
     
@@ -103,8 +149,71 @@ public class DCPU {
      * interpretes the next instruction
      */
     public void step() {
-        Word instruction = this.getRam(this.getPc());
+        Word instructionBinary = this.getRam(this.getPc());
+        Class<? extends Instruction> instructionClass = REGISTERED_INSTRUCTIONS.get(instructionBinary.getOperationCode());
+        if (instructionClass == null) {
+            throw new IllegalStateException("Encountered unknown opcode: " + instructionBinary.getOperationCode());
+        }
         
+        Instruction instruction = instantiate(instructionClass);
+
+        if (instruction.getOperation().getParameterCount() == 2 && !instructionBinary.hasTwoOperandsAsInstruction()) {
+            throw new IllegalStateException(instruction.getOperation() + " expects 2 parameters but binary code has only 1");
+        } else
+            if (instruction.getOperation().getParameterCount() == 1 && instructionBinary.hasTwoOperandsAsInstruction()) {
+                throw new IllegalStateException(instruction.getOperation() + " expects 1 parameter but binary code has 2");
+            }
+        
+        final Word operandAMemoryCell = getOperandMemoryCell(instructionBinary.getOperandA(), OperandMode.MODE_OPERAND_A);
+        Command[] commands;
+        if (instruction.getOperation().getParameterCount() == 2) {
+            final Word operandBMemoryCell = getOperandMemoryCell(instructionBinary.getOperandB(), OperandMode.MODE_OPERAND_B);
+            commands = instruction.execute(operandBMemoryCell, operandAMemoryCell);
+        } else {
+            commands = instruction.execute(operandAMemoryCell);
+        }
+        
+        executeCommands(commands);
+    }
+    
+    private Word getOperandMemoryCell(int operandCode, OperandMode operandMode) {
+        final Class<? extends Operand> operandClass = REGISTERED_OPERANDS.get(operandCode);
+        if (operandClass == null) {
+            throw new IllegalStateException("Operand " + operandCode + " unknown");
+        }
+        final Operand operand = instantiate(operandClass);
+        operand.setValue(operandCode);
+        
+        final Word memoryCell = operand.getMemoryCell(this, operandMode);
+        final Command command = operand.additionalCommand();
+        
+        executeCommand(command);
+        return memoryCell;
+    }
+    
+    private void executeCommands(Command[] commands) {
+        for (Command command : commands) {
+            executeCommand(command);
+        }
+    }
+    
+    private void executeCommand(Command command) {
+        if (command != null) {
+            command.execute(this);
+            cpuCycles++;
+            
+            long timePassed = System.nanoTime() - lastCommandExecution;
+            if (timePassed < timePerCycle) {
+                try {
+                    long timeToSleep = timePerCycle - timePassed;
+                    Thread.sleep(timeToSleep / 100_000_000L, (int)(timeToSleep % 100_000_000));
+                } catch (InterruptedException ex) {
+                    //ignore
+                }
+            }
+            
+            lastCommandExecution = System.nanoTime();
+        }
     }
     
     /**
@@ -156,6 +265,14 @@ public class DCPU {
     
     public Word getRegister(Register register) {
         return this.registers.get(register);
+    }
+    
+    private static <T> T instantiate(Class<T> clazz) {
+        try {
+            return clazz.newInstance();
+        } catch (InstantiationException | IllegalAccessException ex) {
+            throw new IllegalStateException("Could not instantiate " + clazz);
+        }
     }
     
 }
