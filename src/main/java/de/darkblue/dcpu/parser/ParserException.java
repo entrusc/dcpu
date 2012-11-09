@@ -30,6 +30,10 @@ public class ParserException extends Exception {
         this.tokenizer = tokenizer;
     }
     
+    public int getAffectedLineNo() {
+        return this.tokenizer.getLineNo();
+    }
+    
     @Override
     public String getMessage() {
         StringBuilder message = new StringBuilder();
@@ -58,7 +62,32 @@ public class ParserException extends Exception {
         message.append(exceptionMessage);
         
         return message.toString();
-//        return super.getMessage();
+    }
+    
+    public String getPlainMessage() {
+        StringBuilder message = new StringBuilder();
+        String exceptionMessage = super.getMessage();
+        
+        int lineNo = tokenizer.getLineNo();
+        String line = tokenizer.getLine();
+        message.append(String.format("%04d %s", lineNo, line)).append("\n");
+        message.append("     ");
+        
+        StringBuilder spacing = new StringBuilder();
+        for (int i = 0; i < tokenizer.getColNo() - 1; ++i) {
+            if (i < line.length() && line.charAt(i) == '\t') {
+                spacing.append("\t");
+            } else {
+                spacing.append(" ");
+            }
+        }
+        
+        message.append(spacing);
+        message.append("^").append("\n");
+        message.append("     ").append(spacing);
+        message.append(exceptionMessage);
+        
+        return message.toString();        
     }
     
 }

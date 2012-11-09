@@ -105,7 +105,6 @@ public class DCPU {
                 @Override
                 public void onValueChanged(Word word) {
                     onRamUpdated(position);
-                    System.out.println("position " + position + " changed: " + getRam(position));
                 }
                 
             });
@@ -129,13 +128,13 @@ public class DCPU {
         }
     }
     
-    private void clearRam() {
+    public void clearRam() {
         for (int i = 0; i < ram.length; ++i) {
             ram[i].setSignedInt(0);
         }
     }
     
-    private void clearRegisters() {
+    public void clearRegisters() {
         for (final Register register : Register.values()) {
             registers.get(register).setSignedInt(0);
         }
@@ -180,7 +179,7 @@ public class DCPU {
      * sets it to the last read program or to 0 if no
      * program was loaded to ram before.
      */
-    public void resetExecution() {
+    public void reset() {
         clearRegisters();
         clearRam();
         

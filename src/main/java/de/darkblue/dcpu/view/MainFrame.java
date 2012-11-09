@@ -17,12 +17,26 @@
 package de.darkblue.dcpu.view;
 
 import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.interpreter.MemoryListener;
+import de.darkblue.dcpu.interpreter.Register;
+import de.darkblue.dcpu.parser.DCPUCode;
+import de.darkblue.dcpu.parser.Parser;
+import de.darkblue.dcpu.parser.ParserException;
+import de.darkblue.dcpu.parser.SemanticException;
+import de.darkblue.dcpu.parser.instructions.Word;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Point;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.Icon;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -35,17 +49,38 @@ import org.fife.ui.rtextarea.RTextScrollPane;
  */
 public class MainFrame extends javax.swing.JFrame {
 
+    private static final Icon ICON_LINE_ERROR = SwingUtils.loadIcon("process-stop-3.png");
+    
     private RSyntaxTextArea codeArea;
     private final DCPU dcpu;
     
     private final MemoryFrame memoryFrame;
     private final RegistersFrame registersFrame;
     
+    private volatile boolean needsCompilation = true;
+    private RTextScrollPane codeScrollPane;
+    
     /**
      * Creates new form MainFrame
      */
     public MainFrame(DCPU dcpu) {
         this.dcpu = dcpu;
+        this.dcpu.registerListener(new MemoryListener() {
+
+            @Override
+            public void onRamValueChanged(DCPU dcpu, Word position) {
+            }
+
+            @Override
+            public void onRegisterValueChanged(DCPU dcpu, Register register) {
+                if (register == Register.PC) {
+                    //if the PC changed the programm was started - so we enable
+                    //the reset button
+                    resetButton.setEnabled(true);
+                }
+            }
+            
+        });
         
         initComponents();
         initCodeArea();
@@ -71,6 +106,20 @@ public class MainFrame extends javax.swing.JFrame {
 //        this.jSplitPane2.setRightComponent(ramEditor);
     }
     
+    private void setNeedsCompilation(boolean needsCompilation) {
+        this.needsCompilation = needsCompilation;
+        this.compileButton.setEnabled(needsCompilation);
+        if (this.needsCompilation) {
+            this.resetButton.setEnabled(false);
+            this.runButton.setEnabled(false);
+            this.nextStepButton.setEnabled(false);
+        } else {
+            this.resetButton.setEnabled(false);
+            this.runButton.setEnabled(true);
+            this.nextStepButton.setEnabled(true);
+        }
+    }
+    
     private void initCodeArea() {
         this.codeArea = new RSyntaxTextArea(new RSyntaxDocument(new DasmTokenMakerFactory(), "dasm"));
 //        this.codeArea.setPreferredSize(new Dimension(500, 500));
@@ -80,20 +129,84 @@ public class MainFrame extends javax.swing.JFrame {
         this.codeArea.setBracketMatchingEnabled(true);
         this.codeArea.setAnimateBracketMatching(false);
         
+        this.codeArea.getDocument().addDocumentListener(new DocumentListener() {
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                setNeedsCompilation(true);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                setNeedsCompilation(true);
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                setNeedsCompilation(true);
+            }
+            
+        });
+        
+        
         try {
-            Theme theme = Theme.load(this.getClass().getResourceAsStream("/defaultTheme.xml"));
+            Theme theme = Theme.load(this.getClass().getResourceAsStream("defaultTheme.xml"));
             theme.apply(codeArea);
         } catch (IOException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
+        codeScrollPane = new RTextScrollPane(codeArea);
+        codeScrollPane.setIconRowHeaderEnabled(false);
         
-        RTextScrollPane sp = new RTextScrollPane(codeArea);
-        sp.setLineNumbersEnabled(true);
+        codeScrollPane.setLineNumbersEnabled(true);
         
         AutoCompletion autoCompletion = new AutoCompletion(new DasmAutocompleteProvider());
         autoCompletion.install(codeArea);
         
-        getContentPane().add(sp, java.awt.BorderLayout.CENTER);        
+        getContentPane().add(codeScrollPane, java.awt.BorderLayout.CENTER);        
+    }
+    
+    private void clearGutterIcon() {
+        codeScrollPane.getGutter().removeAllTrackingIcons();
+        codeScrollPane.setIconRowHeaderEnabled(false);
+    }
+    
+    private void setGutterIcon(int line, Icon icon) {
+        clearGutterIcon();
+        codeScrollPane.setIconRowHeaderEnabled(true);
+        try {
+            codeScrollPane.getGutter().addLineTrackingIcon(line, icon);
+        } catch (BadLocationException ex) {
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void compile() {
+        try {
+            final String code = this.codeArea.getText();
+            final Reader reader = new StringReader(code);
+            
+            final Parser parser = new Parser(reader);
+            final DCPUCode compiledCode = parser.parse();
+            
+            final ByteArrayOutputStream byteOut = 
+                    new ByteArrayOutputStream();
+            compiledCode.store(byteOut);
+            
+            final ByteArrayInputStream byteIn = 
+                    new ByteArrayInputStream(byteOut.toByteArray());
+            dcpu.readRam(byteIn);
+            dcpu.clearRegisters();
+            
+            setNeedsCompilation(false);
+            this.clearGutterIcon();
+        } catch (IOException e) {
+            //should not happen
+        } catch (ParserException e) {
+            this.setGutterIcon(e.getAffectedLineNo(), ICON_LINE_ERROR);
+        } catch (SemanticException e) {
+            
+        }
     }
 
     /**
@@ -107,40 +220,137 @@ public class MainFrame extends javax.swing.JFrame {
 
         jToolBar1 = new javax.swing.JToolBar();
         jButton1 = new javax.swing.JButton();
-        jMenuBar1 = new javax.swing.JMenuBar();
-        jMenu1 = new javax.swing.JMenu();
-        jMenu2 = new javax.swing.JMenu();
+        jButton2 = new javax.swing.JButton();
+        jButton3 = new javax.swing.JButton();
+        filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
+        jButton4 = new javax.swing.JButton();
+        jButton5 = new javax.swing.JButton();
+        filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
+        compileButton = new javax.swing.JButton();
+        filler3 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
+        resetButton = new javax.swing.JButton();
+        runButton = new javax.swing.JButton();
+        nextStepButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new java.awt.Dimension(300, 200));
         setPreferredSize(new java.awt.Dimension(1024, 600));
 
+        jToolBar1.setFloatable(false);
         jToolBar1.setRollover(true);
 
-        jButton1.setText("jButton1");
+        jButton1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-new-5.png"))); // NOI18N
         jButton1.setFocusable(false);
         jButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         jButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
         jToolBar1.add(jButton1);
 
+        jButton2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-open-5.png"))); // NOI18N
+        jButton2.setFocusable(false);
+        jButton2.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton2.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToolBar1.add(jButton2);
+
+        jButton3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-export.png"))); // NOI18N
+        jButton3.setEnabled(false);
+        jButton3.setFocusable(false);
+        jButton3.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton3.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToolBar1.add(jButton3);
+        jToolBar1.add(filler1);
+
+        jButton4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/edit-undo-8.png"))); // NOI18N
+        jButton4.setEnabled(false);
+        jButton4.setFocusable(false);
+        jButton4.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton4.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToolBar1.add(jButton4);
+
+        jButton5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/edit-redo-8.png"))); // NOI18N
+        jButton5.setEnabled(false);
+        jButton5.setFocusable(false);
+        jButton5.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton5.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToolBar1.add(jButton5);
+        jToolBar1.add(filler2);
+
+        compileButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/cog.png"))); // NOI18N
+        compileButton.setEnabled(false);
+        compileButton.setFocusable(false);
+        compileButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        compileButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        compileButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                compileButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(compileButton);
+        jToolBar1.add(filler3);
+
+        resetButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-revert-5.png"))); // NOI18N
+        resetButton.setToolTipText("reset");
+        resetButton.setEnabled(false);
+        resetButton.setFocusable(false);
+        resetButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        resetButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        resetButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                resetButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(resetButton);
+
+        runButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/arrow-right-3.png"))); // NOI18N
+        runButton.setEnabled(false);
+        runButton.setFocusable(false);
+        runButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        runButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToolBar1.add(runButton);
+
+        nextStepButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/arrow-right-double.png"))); // NOI18N
+        nextStepButton.setToolTipText("next instruction");
+        nextStepButton.setEnabled(false);
+        nextStepButton.setFocusable(false);
+        nextStepButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        nextStepButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        nextStepButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                nextStepButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(nextStepButton);
+
         getContentPane().add(jToolBar1, java.awt.BorderLayout.PAGE_START);
-
-        jMenu1.setText("File");
-        jMenuBar1.add(jMenu1);
-
-        jMenu2.setText("Edit");
-        jMenuBar1.add(jMenu2);
-
-        setJMenuBar(jMenuBar1);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void nextStepButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_nextStepButtonActionPerformed
+        dcpu.step();
+    }//GEN-LAST:event_nextStepButtonActionPerformed
+
+    private void compileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_compileButtonActionPerformed
+        compile();
+    }//GEN-LAST:event_compileButtonActionPerformed
+
+    private void resetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetButtonActionPerformed
+        dcpu.reset();
+        resetButton.setEnabled(false);
+    }//GEN-LAST:event_resetButtonActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton compileButton;
+    private javax.swing.Box.Filler filler1;
+    private javax.swing.Box.Filler filler2;
+    private javax.swing.Box.Filler filler3;
     private javax.swing.JButton jButton1;
-    private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
-    private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton3;
+    private javax.swing.JButton jButton4;
+    private javax.swing.JButton jButton5;
     private javax.swing.JToolBar jToolBar1;
+    private javax.swing.JButton nextStepButton;
+    private javax.swing.JButton resetButton;
+    private javax.swing.JButton runButton;
     // End of variables declaration//GEN-END:variables
 }

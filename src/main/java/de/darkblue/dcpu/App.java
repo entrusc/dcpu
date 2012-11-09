@@ -30,24 +30,9 @@ import javax.swing.UnsupportedLookAndFeelException;
 public class App {
     
     public static void main(String[] args) throws Exception {
-        final String simpleASM = "SET A, 20";
-        
-        Parser parser = new Parser(new StringReader(simpleASM));
-        DCPUCode code = parser.parse();
-        
-        System.out.println(code);
-        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        code.store(byteOut);
-        
-        
-        ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
-        DCPU dcpu = new DCPU();
-        dcpu.readRam(byteIn);
-        
-//        System.out.println(dcpu.getRegister(Register.A));
         activateLookAndFeel();
         
-//        final DCPU dcpu = new DCPU();
+        final DCPU dcpu = new DCPU();
         
         final MainFrame mainFrame = new MainFrame(dcpu);
         mainFrame.setVisible(true);
