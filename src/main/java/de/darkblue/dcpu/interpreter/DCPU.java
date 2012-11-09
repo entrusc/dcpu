@@ -23,16 +23,16 @@ import de.darkblue.dcpu.interpreter.operands.Operand;
 import de.darkblue.dcpu.interpreter.operands.Operand.OperandMode;
 import de.darkblue.dcpu.interpreter.operands.OperandDefinition;
 import de.darkblue.dcpu.parser.instructions.Word;
+import de.darkblue.dcpu.parser.instructions.WordChangeListener;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.reflections.Reflections;
 
 /**
@@ -81,25 +81,63 @@ public class DCPU {
     private long lastCommandExecution = 0L;
     
     private long timePerCycle = 1_000_000_000L / DEFAULT_HZ;
+    
+    private final Set<MemoryListener> listeners = new HashSet<>();
 
     public DCPU() {
-        clearRam();
-        clearRegisters();
+        initRam();
+        initRegisters();
         
         for (int i = 0; i < lastReadProgram.length; ++i) {
             lastReadProgram[i] = Word.ZERO.clone();
         }
     }
     
-    public final void clearRam() {
+    public final void initRam() {
         for (int i = 0; i < ram.length; ++i) {
+            final Word position = new Word();
+            position.setUnsignedInt(i);
+            
             ram[i] = Word.ZERO.clone();
+            
+            ram[i].registerListener(new WordChangeListener() {
+
+                @Override
+                public void onValueChanged(Word word) {
+                    onRamUpdated(position);
+                    System.out.println("position " + position + " changed: " + getRam(position));
+                }
+                
+            });
+        }
+    }
+    
+    private void initRegisters() {
+        for (final Register register : Register.values()) {
+            final Word registerWord = Word.ZERO.clone();
+            
+            registers.put(register, registerWord);
+            
+            registerWord.registerListener(new WordChangeListener() {
+
+                @Override
+                public void onValueChanged(Word word) {
+                    onRegisterUpdated(register);
+                }
+                
+            });
+        }
+    }
+    
+    private void clearRam() {
+        for (int i = 0; i < ram.length; ++i) {
+            ram[i].setSignedInt(0);
         }
     }
     
     private void clearRegisters() {
-        for (Register register : Register.values()) {
-            registers.put(register, Word.ZERO.clone());
+        for (final Register register : Register.values()) {
+            registers.get(register).setSignedInt(0);
         }
     }
 
@@ -131,6 +169,10 @@ public class DCPU {
             //i know this is bad style: condition by 
             //exception - but I have no choice here ...
         }        
+    }
+    
+    public int getRamSize() {
+        return this.ram.length;
     }
     
     /**
@@ -263,8 +305,34 @@ public class DCPU {
         return this.getRegister(Register.SP);
     }
     
+    /**
+     * returns the word of the given register
+     * 
+     * @param register
+     * @return 
+     */
     public Word getRegister(Register register) {
         return this.registers.get(register);
+    }
+    
+    public synchronized void registerListener(MemoryListener listener) {
+        this.listeners.add(listener);
+    }
+    
+    public synchronized void removeListener(MemoryListener listener) {
+        this.listeners.remove(listener);
+    }
+    
+    private void onRamUpdated(Word position) {
+        for (MemoryListener listener : listeners) {
+            listener.onRamValueChanged(this, position);
+        }
+    }
+    
+    private void onRegisterUpdated(Register register) {
+        for (MemoryListener listener : listeners) {
+            listener.onRegisterValueChanged(this, register);
+        }
     }
     
     private static <T> T instantiate(Class<T> clazz) {

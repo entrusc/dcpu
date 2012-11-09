@@ -20,6 +20,8 @@ package de.darkblue.dcpu.parser.instructions;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  *
@@ -31,13 +33,14 @@ public class Word {
     public static final Word ONE = new Word(1);
     
     private int word;
+    private final Set<WordChangeListener> listeners = new HashSet<>();
 
     public Word() {
-        this.word = 0;
+        this(0);
     }
     
     private Word (int word) {
-        this.word = word;
+        this.setWord(word);
     }
     
     public void inc() {
@@ -45,23 +48,23 @@ public class Word {
     }
     
     public boolean add(Word other) {
-        this.word += other.word;
+        this.setWord(this.word + other.word);
         return checkOverOrUnderflow();
     }
     
     public boolean subtract(Word other) {
-        this.word -= other.word;
+        this.setWord(word - other.word);
         return checkOverOrUnderflow();
     }    
     
     private boolean checkOverOrUnderflow() {
         boolean overOrUnderflow = false;
         while (this.word > 0xFFFF) {
-            this.word = this.word - 0xFFFF;
+            this.setWord(this.word - 0xFFFF);
             overOrUnderflow = true;
         }
         while (this.word < 0) {
-            this.word = 0xFFFF - this.word;
+            this.setWord(0xFFFF - this.word);
             overOrUnderflow = true;
         }
         return overOrUnderflow;
@@ -74,12 +77,12 @@ public class Word {
         }
         
         if (opcode.getParameterCount() == 1) {
-            this.word |= ((opcode.getOpcode() & 0b0001_1111) << 5);
+            this.setWord(this.word | ((opcode.getOpcode() & 0b0001_1111) << 5));
         } else {
-            this.word |= (opcode.getOpcode() & 0b0001_1111);
-            this.word |= ((instruction.getOperandB().getOperandCode() & 0b0001_1111) << 5);
+            this.setWord(this.word | (opcode.getOpcode() & 0b0001_1111));
+            this.setWord(this.word | ((instruction.getOperandB().getOperandCode() & 0b0001_1111) << 5));
         }
-        this.word |= ((instruction.getOperandA().getOperandCode() & 0b0011_1111) << 10);
+        this.setWord(this.word | ((instruction.getOperandA().getOperandCode() & 0b0011_1111) << 10));
     }
     
     public boolean hasTwoOperandsAsInstruction() {
@@ -107,18 +110,18 @@ public class Word {
     
     public void setSignedInt(int integer) {
         if (integer < 0) {
-            word = ~(Math.abs(integer) & 0b0111_1111_1111_11111) + 1;
+            this.setWord(~(Math.abs(integer) & 0b0111_1111_1111_11111) + 1);
         } else {
-            word = integer & 0b0111_1111_1111_11111;
+            this.setWord(integer & 0b0111_1111_1111_11111);
         }
     }
     
     public void setUnsignedInt(int integer) {
-        this.word = integer & 0xFFFF;
+        this.setWord(integer & 0xFFFF);
     }
     
     public void set(Word word) {
-        this.word = word.word;
+        this.setWord(word.word);
     }
     
     public void store(DataOutputStream dataOut) throws IOException {
@@ -141,6 +144,29 @@ public class Word {
     
     public int unsignedIntValue() {
         return word;
+    }
+    
+    public synchronized void registerListener(WordChangeListener listener) {
+        this.listeners.add(listener);
+    }
+    
+    public synchronized void removeListener(WordChangeListener listener) {
+        this.listeners.remove(listener);
+    }
+    
+    private void setWord(int word) {
+        boolean changed = (word != this.word);
+        this.word = word;
+        
+        if (changed) {
+            onValueUpdated();
+        }
+    }
+    
+    private synchronized void onValueUpdated() {
+        for (WordChangeListener listener : listeners) {
+            listener.onValueChanged(this);
+        }
     }
 
     @Override
