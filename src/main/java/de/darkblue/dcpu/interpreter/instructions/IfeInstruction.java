@@ -24,7 +24,7 @@ import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 
 /**
- * IDE Instruction
+ * IFE Instruction
  * @author Florian Frankenberger
  */
 @InstructionDefinition(operation=Operation.IFE)

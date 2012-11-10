@@ -215,15 +215,29 @@ public class MainFrame extends javax.swing.JFrame {
             dcpu.clearRegisters();
             
             setNeedsCompilation(false);
-            this.clearGutterIcon();
+            this.clearError();
         } catch (IOException e) {
             //should not happen
         } catch (ParserException e) {
-            this.setGutterIcon(e.getAffectedLineNo(), ICON_LINE_ERROR);
-            this.errorPanel.setText(e.getPlainMessage());
+            setError(e.getPlainMessage(), e.getAffectedLineNo());
         } catch (SemanticException e) {
-            this.errorPanel.setText(e.getMessage());
+            setError(e.getMessage(), null);
         }
+    }
+    
+    private void setError(String errorMsg, Integer lineNo) {
+        this.errorText.setText(errorMsg);
+        if (lineNo != null) {
+            this.setGutterIcon(lineNo, ICON_LINE_ERROR);
+        } else {
+            this.clearGutterIcon();
+        }
+        this.errorPanel.setVisible(true);
+    }
+    
+    private void clearError() {
+        this.clearGutterIcon();
+        this.errorPanel.setVisible(false);
     }
 
     /**
@@ -248,8 +262,11 @@ public class MainFrame extends javax.swing.JFrame {
         resetButton = new javax.swing.JButton();
         runButton = new javax.swing.JButton();
         nextStepButton = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        errorPanel = new javax.swing.JTextArea();
+        errorPanel = new javax.swing.JPanel();
+        errorPanel.setVisible(false);
+        jLabel1 = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        errorText = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("DCPU");
@@ -347,11 +364,37 @@ public class MainFrame extends javax.swing.JFrame {
 
         getContentPane().add(jToolBar1, java.awt.BorderLayout.PAGE_START);
 
-        errorPanel.setColumns(20);
-        errorPanel.setRows(5);
-        jScrollPane1.setViewportView(errorPanel);
+        jLabel1.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        jLabel1.setText("Error");
 
-        getContentPane().add(jScrollPane1, java.awt.BorderLayout.PAGE_END);
+        errorText.setEditable(false);
+        errorText.setBackground(new java.awt.Color(52, 42, 42));
+        errorText.setColumns(20);
+        errorText.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
+        errorText.setForeground(new java.awt.Color(193, 204, 194));
+        errorText.setRows(5);
+        jScrollPane2.setViewportView(errorText);
+
+        javax.swing.GroupLayout errorPanelLayout = new javax.swing.GroupLayout(errorPanel);
+        errorPanel.setLayout(errorPanelLayout);
+        errorPanelLayout.setHorizontalGroup(
+            errorPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 954, Short.MAX_VALUE)
+            .addGroup(errorPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel1)
+                .addContainerGap())
+        );
+        errorPanelLayout.setVerticalGroup(
+            errorPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(errorPanelLayout.createSequentialGroup()
+                .addGap(5, 5, 5)
+                .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 107, Short.MAX_VALUE))
+        );
+
+        getContentPane().add(errorPanel, java.awt.BorderLayout.PAGE_END);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -379,7 +422,8 @@ public class MainFrame extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton compileButton;
-    private javax.swing.JTextArea errorPanel;
+    private javax.swing.JPanel errorPanel;
+    private javax.swing.JTextArea errorText;
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
     private javax.swing.Box.Filler filler3;
@@ -388,7 +432,8 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JToolBar jToolBar1;
     private javax.swing.JButton nextStepButton;
     private javax.swing.JButton resetButton;
