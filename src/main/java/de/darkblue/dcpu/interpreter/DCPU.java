@@ -77,16 +77,19 @@ public class DCPU {
     private Word[] lastReadProgram = new Word[0x10000];
     private Map<Register, Word> registers = new EnumMap<>(Register.class);
     
-    private int cpuCycles = 0;
+    private long cpuCycles = 0L;
     private long lastCommandExecution = 0L;
     
-    private long timePerCycle = 1_000_000_000L / DEFAULT_HZ;
+    private long timePerCycle;
     
-    private final Set<MemoryListener> listeners = new HashSet<>();
+    private final Set<DCPUListener> listeners = new HashSet<>();
+    private Thread runThread = null;
+    private volatile boolean stop = false;
 
     public DCPU() {
         initRam();
         initRegisters();
+        setSimulationSpeed(DEFAULT_HZ);
         
         for (int i = 0; i < lastReadProgram.length; ++i) {
             lastReadProgram[i] = Word.ZERO.clone();
@@ -104,7 +107,7 @@ public class DCPU {
 
                 @Override
                 public void onValueChanged(Word word) {
-                    onRamUpdated(position);
+                    notifyOnRamUpdated(position);
                 }
                 
             });
@@ -121,11 +124,23 @@ public class DCPU {
 
                 @Override
                 public void onValueChanged(Word word) {
-                    onRegisterUpdated(register);
+                    notifyOnRegisterUpdated(register);
                 }
                 
             });
         }
+    }
+    
+    /**
+     * sets the emulation speed in herz (Hz)
+     * 
+     * @param SpeedInHz
+     */
+    public void setSimulationSpeed(long speedInHz) {
+        if (speedInHz <= 0) {
+            throw new IllegalArgumentException("Hz must be > 0");
+        }
+        this.timePerCycle = 1_000_000_000L / speedInHz;
     }
     
     public void clearRam() {
@@ -159,11 +174,13 @@ public class DCPU {
         final Word word = new Word();
         final DataInputStream dataIn = new DataInputStream(in);
         try {
-            word.read(dataIn);
-            this.getRam(codePosition).set(word);
-            this.lastReadProgram[codePosition.unsignedIntValue()].set(word);
-            
-            codePosition.inc();
+            while (true) {
+                word.read(dataIn);
+                this.getRam(codePosition).set(word);
+                this.lastReadProgram[codePosition.unsignedIntValue()].set(word);
+
+                codePosition.inc();
+            }
         } catch (EOFException e) {
             //i know this is bad style: condition by 
             //exception - but I have no choice here ...
@@ -179,11 +196,14 @@ public class DCPU {
      * sets it to the last read program or to 0 if no
      * program was loaded to ram before.
      */
-    public void reset() {
+    public synchronized void reset() {
+        stop();
         clearRegisters();
         clearRam();
         
         resetRam();
+        this.setCpuCycles(0);
+        notifyOnResetEmulation();
     }
     
     /**
@@ -193,7 +213,13 @@ public class DCPU {
         Word instructionBinary = this.getRam(this.getPc());
         Class<? extends Instruction> instructionClass = REGISTERED_INSTRUCTIONS.get(instructionBinary.getOperationCode());
         if (instructionClass == null) {
-            throw new IllegalStateException("Encountered unknown opcode: " + instructionBinary.getOperationCode());
+            if (instructionBinary.getOperationCode() == 0) {
+                //=> DAT 0 means stop the execution
+                this.stop(false);
+                return;
+            } else {
+                throw new IllegalStateException("Encountered unknown opcode: " + instructionBinary.getOperationCode() + " @ " + getPc());
+            }
         }
         
         Instruction instruction = instantiate(instructionClass);
@@ -205,35 +231,76 @@ public class DCPU {
                 throw new IllegalStateException(instruction.getOperation() + " expects 1 parameter but binary code has 2");
             }
         
-        final Word operandAMemoryCell = getOperandMemoryCell(instructionBinary.getOperandA(), OperandMode.MODE_OPERAND_A);
-        Command[] commands;
+        final Word operandACell = getOperandMemoryCell(instructionBinary.getOperandA(), OperandMode.MODE_OPERAND_A);
+        final Command[] commands;
         if (instruction.getOperation().getParameterCount() == 2) {
-            final Word operandBMemoryCell = getOperandMemoryCell(instructionBinary.getOperandB(), OperandMode.MODE_OPERAND_B);
-            commands = instruction.execute(operandBMemoryCell, operandAMemoryCell);
+            final Word operandBCell = getOperandMemoryCell(instructionBinary.getOperandB(), OperandMode.MODE_OPERAND_B);
+            commands = instruction.execute(operandBCell, operandACell);
         } else {
-            commands = instruction.execute(operandAMemoryCell);
+            commands = instruction.execute(operandACell);
         }
         
+        this.getPc().inc();
         executeCommands(commands);
+    }
+    
+    public synchronized void start() {
+        stop();
+        runThread = new Thread() {
+
+            @Override
+            public void run() {
+                while (!stop) {
+                    step();
+                }
+                runThread = null;
+                stop = false;
+                notifyOnStopEmulation();
+            }
+            
+        };
+        runThread.start();
+        notifyOnStartEmulation();
+    }
+    
+    public void stop() {
+        this.stop(true);
+    }
+    
+    private synchronized void stop(boolean waitForStop) {
+        if (this.runThread != null) {
+            this.stop = true;
+            if (waitForStop) {
+                try {
+                    this.runThread.join();
+                } catch (InterruptedException ex) {
+                    //ignore
+                }
+            }
+        }
+    }
+    
+    public synchronized boolean isRunning() {
+        return this.runThread != null;
     }
     
     private Word getOperandMemoryCell(int operandCode, OperandMode operandMode) {
         final Class<? extends Operand> operandClass = REGISTERED_OPERANDS.get(operandCode);
         if (operandClass == null) {
-            throw new IllegalStateException("Operand " + operandCode + " unknown");
+            throw new IllegalStateException("Operand " + String.format("0x%02x", operandCode) + " unknown");
         }
         final Operand operand = instantiate(operandClass);
         operand.setValue(operandCode);
         
         final Word memoryCell = operand.getMemoryCell(this, operandMode);
-        final Command command = operand.additionalCommand();
+        final Command command = operand.additionalCommand(operandMode);
         
         executeCommand(command);
         return memoryCell;
     }
     
     private void executeCommands(Command[] commands) {
-        for (Command command : commands) {
+        for (final Command command : commands) {
             executeCommand(command);
         }
     }
@@ -241,13 +308,13 @@ public class DCPU {
     private void executeCommand(Command command) {
         if (command != null) {
             command.execute(this);
-            cpuCycles++;
+            this.setCpuCycles(this.cpuCycles + 1);
             
             long timePassed = System.nanoTime() - lastCommandExecution;
             if (timePassed < timePerCycle) {
+                long timeToSleep = timePerCycle - timePassed;
                 try {
-                    long timeToSleep = timePerCycle - timePassed;
-                    Thread.sleep(timeToSleep / 100_000_000L, (int)(timeToSleep % 100_000_000));
+                    Thread.sleep(timeToSleep / 1_000_000L, (int)(timeToSleep % 1_000_000));
                 } catch (InterruptedException ex) {
                     //ignore
                 }
@@ -255,6 +322,11 @@ public class DCPU {
             
             lastCommandExecution = System.nanoTime();
         }
+    }
+    
+    private void setCpuCycles(long cycles) {
+        this.cpuCycles = cycles;
+        this.notifyOnCycle();
     }
     
     /**
@@ -314,31 +386,75 @@ public class DCPU {
         return this.registers.get(register);
     }
     
-    public synchronized void registerListener(MemoryListener listener) {
+    public void registerListener(DCPUListener listener) {
         this.listeners.add(listener);
     }
     
-    public synchronized void removeListener(MemoryListener listener) {
+    public void removeListener(DCPUListener listener) {
         this.listeners.remove(listener);
     }
     
-    private void onRamUpdated(Word position) {
-        for (MemoryListener listener : listeners) {
+    private Set<DCPUListener> getListenerCopy() {
+        synchronized (this.listeners) {
+            return new HashSet<>(this.listeners);
+        }
+    }
+    
+    private void notifyOnRamUpdated(Word position) {
+        for (DCPUListener listener : getListenerCopy()) {
             listener.onRamValueChanged(this, position);
         }
     }
     
-    private void onRegisterUpdated(Register register) {
-        for (MemoryListener listener : listeners) {
+    private void notifyOnRegisterUpdated(Register register) {
+        for (DCPUListener listener : getListenerCopy()) {
             listener.onRegisterValueChanged(this, register);
         }
     }
     
+    
+    private void notifyOnStartEmulation() {
+        for (DCPUListener listener : getListenerCopy()) {
+            listener.onStartEmulation(this);
+        }
+    }    
+    
+    private void notifyOnStopEmulation() {
+        for (DCPUListener listener : getListenerCopy()) {
+            listener.onStopEmulation(this);
+        }
+    }    
+    
+    private void notifyOnResetEmulation() {
+        for (DCPUListener listener : getListenerCopy()) {
+            listener.onResetEmulation(this);
+        }
+    }        
+    
+    private void notifyOnCycle() {
+        for (DCPUListener listener : getListenerCopy()) {
+            listener.onCyclesUpdate(this, this.cpuCycles);
+        }
+    }    
     private static <T> T instantiate(Class<T> clazz) {
         try {
             return clazz.newInstance();
         } catch (InstantiationException | IllegalAccessException ex) {
             throw new IllegalStateException("Could not instantiate " + clazz);
+        }
+    }
+
+    public long getCycles() {
+        return this.cpuCycles;
+    }
+    
+    private static class OperandResult {
+        private final Word cell;
+        private final Command command;
+
+        public OperandResult(Word cell, Command command) {
+            this.cell = cell;
+            this.command = command;
         }
     }
     

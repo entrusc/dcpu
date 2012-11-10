@@ -52,7 +52,7 @@ public abstract class Instruction {
      * @param operands 1 or 2 operands depending on the operation
      * @return 
      */
-    public abstract Command[] execute(Word... operands);
+    public abstract Command[] execute(final Word... operands);
     
     @Override
     public String toString() {

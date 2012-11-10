@@ -18,7 +18,7 @@
 package de.darkblue.dcpu.view;
 
 import de.darkblue.dcpu.interpreter.DCPU;
-import de.darkblue.dcpu.interpreter.MemoryListener;
+import de.darkblue.dcpu.interpreter.DCPUListener;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Word;
 import javax.swing.table.AbstractTableModel;
@@ -27,7 +27,7 @@ import javax.swing.table.AbstractTableModel;
  *
  * @author Florian Frankenberger
  */
-public class DCPURegisterTableModel extends AbstractTableModel implements MemoryListener {
+public class DCPURegisterTableModel extends AbstractTableModel implements DCPUListener {
 
     private final DCPU dcpu;
     
@@ -38,7 +38,7 @@ public class DCPURegisterTableModel extends AbstractTableModel implements Memory
 
     @Override
     public int getRowCount() {
-        return Register.values().length;
+        return Register.values().length + 1; //special cycles register
     }
 
     @Override
@@ -60,9 +60,17 @@ public class DCPURegisterTableModel extends AbstractTableModel implements Memory
     public Object getValueAt(int rowIndex, int columnIndex) {
         switch (columnIndex) {
             case 0:
-                return Register.values()[rowIndex];
+                if (rowIndex == Register.values().length) {
+                    return "Cycles";
+                } else {
+                    return Register.values()[rowIndex];
+                }
             default:
-                return dcpu.getRegister(Register.values()[rowIndex]);
+                if (rowIndex == Register.values().length) {
+                    return String.format("%x", dcpu.getCycles());
+                } else {
+                    return dcpu.getRegister(Register.values()[rowIndex]);
+                }
         }
     }
 
@@ -74,7 +82,22 @@ public class DCPURegisterTableModel extends AbstractTableModel implements Memory
     public void onRegisterValueChanged(DCPU dcpu, Register register) {
         fireTableCellUpdated(register.ordinal(), 1);
     }
-    
-    
+
+    @Override
+    public void onStartEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onStopEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onResetEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
+        fireTableCellUpdated(Register.values().length, 1);
+    }
     
 }

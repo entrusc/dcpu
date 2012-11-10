@@ -19,6 +19,7 @@ package de.darkblue.dcpu.interpreter.operands;
 
 import de.darkblue.dcpu.interpreter.Command;
 import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.interpreter.NopCommand;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Word;
 
@@ -26,42 +27,50 @@ import de.darkblue.dcpu.parser.instructions.Word;
  *
  * @author Florian Frankenberger
  */
-@OperandDefinition(operandCodes={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x1b, 0x1c, 0x1d})
-public class RegisterOperand extends Operand {
+@OperandDefinition(operandCodes={0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17})
+public class RegisterDereferencedAddNextWordOperand extends Operand {
 
     @Override
     public Word getMemoryCell(DCPU dcpu, OperandMode mode) {
+        dcpu.getPc().inc();
+        final Word totalValue = dcpu.getRam(dcpu.getPc()).clone();        
+        Register register;
         switch (this.value) {
-            case 0x00:
-                return dcpu.getRegister(Register.A);
-            case 0x01:
-                return dcpu.getRegister(Register.B);
-            case 0x02:
-                return dcpu.getRegister(Register.C);
-            case 0x03:
-                return dcpu.getRegister(Register.X);
-            case 0x04:
-                return dcpu.getRegister(Register.Y);
-            case 0x05:
-                return dcpu.getRegister(Register.Z);
-            case 0x06:
-                return dcpu.getRegister(Register.I);
-            case 0x07:
-                return dcpu.getRegister(Register.J);
-            case 0x1b:
-                return dcpu.getRegister(Register.SP);
-            case 0x1c:
-                return dcpu.getRegister(Register.PC);
-            case 0x1d:
-                return dcpu.getRegister(Register.EX);
+            case 0x10:
+                register = Register.A;
+                break;
+            case 0x11:
+                register = Register.B;
+                break;
+            case 0x12:
+                register = Register.C;
+                break;
+            case 0x13:
+                register = Register.X;
+                break;
+            case 0x14:
+                register = Register.Y;
+                break;
+            case 0x15:
+                register = Register.Z;
+                break;
+            case 0x16:
+                register = Register.I;
+                break;
+            case 0x17:
+                register = Register.J;
+                break;
             default:
                 throw new IllegalArgumentException("value is not in range");
         }
+        
+        totalValue.addLocal(dcpu.getRegister(register));
+        return dcpu.getRam(totalValue);
     }
 
     @Override
     public Command additionalCommand(OperandMode mode) {
-        return null;
+        return new NopCommand(); //+1 cycles
     }
 
 }

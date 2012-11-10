@@ -41,7 +41,12 @@ public class Instruction {
     
     public void setOperandA(Operand operandA) {
         this.operandA = operandA;
-        this.operandA.setOperandMode(Operand.OperandMode.MODE_OPERAND_A);
+        if (this.getOperation() != Operation.DAT) {
+            this.operandA.setOperandMode(Operand.OperandMode.MODE_OPERAND_A);
+        } else {
+            //fix to store the dat value directly without literal value optimization
+            this.operandA.setOperandMode(Operand.OperandMode.MODE_OPERAND_B);
+        }
     }
     
     public void setOperandB(Operand operandB) {

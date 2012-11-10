@@ -17,15 +17,13 @@
 
 package de.darkblue.dcpu.parser.instructions.operands;
 
-import de.darkblue.dcpu.parser.instructions.Operand;
-
 /**
  *
  * @author Florian Frankenberger
  */
 public class LiteralJumpMarkOperand extends JumpMarkOperand {
     
-    private Operand literalOperand;
+    private LiteralOperand literalOperand;
 
     public LiteralJumpMarkOperand(String jumpMarking) {
         super(jumpMarking);
@@ -40,6 +38,7 @@ public class LiteralJumpMarkOperand extends JumpMarkOperand {
     public void resolveMarking(int address) {
         literalOperand = new LiteralOperand(address);
         literalOperand.setOperandMode(operandMode);
+        literalOperand.setForceNextWordStorage(true);
     }
     
     @Override
@@ -54,7 +53,7 @@ public class LiteralJumpMarkOperand extends JumpMarkOperand {
 
     @Override
     public boolean hasAdditionalWord() {
-        return literalOperand.hasAdditionalWord();
+        return true; //always true
     }
 
     @Override

@@ -18,7 +18,7 @@
 package de.darkblue.dcpu.view;
 
 import de.darkblue.dcpu.interpreter.DCPU;
-import de.darkblue.dcpu.interpreter.MemoryListener;
+import de.darkblue.dcpu.interpreter.DCPUListener;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Word;
 import javax.swing.table.AbstractTableModel;
@@ -27,7 +27,7 @@ import javax.swing.table.AbstractTableModel;
  *
  * @author Florian Frankenberger
  */
-public class DCPUMemoryTableModel extends AbstractTableModel implements MemoryListener {
+public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUListener {
 
     private final DCPU dcpu;
     
@@ -80,6 +80,22 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements MemoryLi
 
     @Override
     public void onRegisterValueChanged(DCPU dcpu, Register register) {
+    }
+
+    @Override
+    public void onStartEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onStopEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onResetEmulation(DCPU dcpu) {
+    }
+
+    @Override
+    public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
     }
     
     

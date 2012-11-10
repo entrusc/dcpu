@@ -61,7 +61,9 @@ public enum Operation {
     IAQ(0x0C, 1),
     HWN(0x10, 1),
     HWQ(0x11, 1),
-    HWI(0x12, 1);
+    HWI(0x12, 1),
+    
+    DAT(0x00, 1); //not specified in standard but common practice
     
     private static final Map<String, Operation> OERATION_LOOKUP = new HashMap<>();
     static {

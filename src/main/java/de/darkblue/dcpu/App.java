@@ -18,12 +18,7 @@
 package de.darkblue.dcpu;
 
 import de.darkblue.dcpu.interpreter.DCPU;
-import de.darkblue.dcpu.parser.DCPUCode;
-import de.darkblue.dcpu.parser.Parser;
 import de.darkblue.dcpu.view.MainFrame;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -36,7 +31,6 @@ public class App {
         
         final MainFrame mainFrame = new MainFrame(dcpu);
         mainFrame.setVisible(true);
-        dcpu.step();
     }
     
     private static void activateLookAndFeel() throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException {

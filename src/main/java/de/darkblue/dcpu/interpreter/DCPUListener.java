@@ -20,14 +20,22 @@ import de.darkblue.dcpu.parser.instructions.Word;
 
 /**
  * A listener that is called whenever a value in ram or
- * in a register changes
+ * in a register changes or when the emulator is started, stoped or reset
  * 
  * @author Florian Frankenberger
  */
-public interface MemoryListener {
-   
+public interface DCPUListener {
+    
+    void onStartEmulation(DCPU dcpu);
+    
+    void onStopEmulation(DCPU dcpu);
+    
+    void onResetEmulation(DCPU dcpu);
+    
     void onRamValueChanged(DCPU dcpu, Word position);
     
     void onRegisterValueChanged(DCPU dcpu, Register register);
+    
+    void onCyclesUpdate(DCPU dcpu, long totalCycles);
     
 }

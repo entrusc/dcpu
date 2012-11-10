@@ -15,41 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.darkblue.dcpu.interpreter.operands;
+package de.darkblue.dcpu.interpreter.instructions;
 
 import de.darkblue.dcpu.interpreter.Command;
 import de.darkblue.dcpu.interpreter.DCPU;
 import de.darkblue.dcpu.interpreter.NopCommand;
+import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 
 /**
- *
+ * IDE Instruction
  * @author Florian Frankenberger
  */
-@OperandDefinition(operandCodes={0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 
-    0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 
-    0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F})
-public class LiteralOperand extends Operand {
+@InstructionDefinition(operation=Operation.IFE)
+public class IfeInstruction extends Instruction {
 
     @Override
-    public Word getMemoryCell(DCPU dcpu, OperandMode mode) {
-        if (this.value == 0x1f) {
-            dcpu.getPc().inc();
-            return dcpu.getRam(dcpu.getPc());
-        } else {
-            final Word word = new Word();
-            word.setSignedInt(value - 0x21);
-            return word;
-        }
-    }
+    public Command[] execute(final Word... operands) {
+        return new Command[] {
+            new NopCommand(),
+            new Command() {
 
-    @Override
-    public Command additionalCommand(OperandMode mode) {
-        if (this.value == 0x1f) {
-            return new NopCommand(); // +1 for reading the next word
-        } else {
-            return null;
-        }
+                @Override
+                public void execute(DCPU dcpu) {
+                    if (!operands[0].equals(operands[1])) {
+                        dcpu.getPc().inc(); //skip next instruction
+                    }
+                }
+                
+            }
+        };
     }
 
 }

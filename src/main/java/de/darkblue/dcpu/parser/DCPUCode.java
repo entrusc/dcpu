@@ -19,6 +19,7 @@ package de.darkblue.dcpu.parser;
 
 import de.darkblue.dcpu.parser.instructions.Instruction;
 import de.darkblue.dcpu.parser.instructions.Operand;
+import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
 import java.io.DataOutputStream;
@@ -32,12 +33,14 @@ import java.util.Map;
 /**
  *
  * @author Florian Frankenberger
+ * TODO: Jump Markings are not correctly resolved :( - maybe need second pass
  */
 public class DCPUCode {
     
     private List<Instruction> instructions = new ArrayList<>();
-    private Map<String, Integer> jumpMarkings = new HashMap<>();
-    private Map<Integer, String> jumpMarkingsReverse = new HashMap<>();
+    
+    private String jumpMarking = null;
+    private Map<Instruction, String> jumpMarkings = new HashMap<>();
 
     public DCPUCode() {
     }
@@ -45,6 +48,13 @@ public class DCPUCode {
     public int addInstruction(Instruction instruction) {
         final int position = this.instructions.size();
         this.instructions.add(instruction);
+        
+        //do we have a jump marking for this instruction?
+        if (jumpMarking != null) {
+            jumpMarkings.put(instruction, jumpMarking);
+            jumpMarking = null;
+        }
+        
         return position;
     }
     
@@ -54,44 +64,53 @@ public class DCPUCode {
      * @param label 
      */
     public void addJumpMarking(String label) {
-        int codePosition = this.instructions.size();
-        this.addJumpMarking(codePosition, label);
-    }
-    
-    /**
-     * sets a jumpmarking at the given position
-     * 
-     * @param codePosition
-     * @param label 
-     */
-    public void addJumpMarking(int codePosition, String label) {
-        this.jumpMarkings.put(label, codePosition);
-        this.jumpMarkingsReverse.put(codePosition, label);
+        this.jumpMarking = label;
     }
     
     /**
      * resolves all jump marking to literal code positions
      */
     public void resolveJumpMarkings() throws SemanticException {
-        for (Instruction instruction : instructions) {
-            final Operand operandA = instruction.getOperandA();
-            resolveJumpMarking(operandA);
+        //scan for positions
+        int position = 0;
+        final Map<String, Integer> jumpAddresses = new HashMap<>();
+        for (final Instruction instruction : instructions) {
+            if (jumpMarkings.containsKey(instruction)) {
+                final String aJumpMarking = jumpMarkings.get(instruction);
+                jumpAddresses.put(aJumpMarking, position);
+            }
+
+            if (instruction.getOperation() != Operation.DAT) {
+                position++; //for the instruction itself except for DAT
+            } 
             
-            final Operand operandB = instruction.getOperandB();
-            if (operandB != null) {
-                resolveJumpMarking(operandB);
+            if (instruction.getOperandA().hasAdditionalWord()) {
+                position++; //for operandA
+            }
+            if (instruction.getOperation().getParameterCount() == 2) {
+                if (instruction.getOperandB().hasAdditionalWord()) {
+                    position++; //for operandB
+                }
+            }
+        }
+        
+        //resolve jump markings
+        for (final Instruction instruction : instructions) {
+            resolveJumpMarking(jumpAddresses, instruction.getOperandA());
+            if (instruction.getOperation().getParameterCount() > 1) {
+                resolveJumpMarking(jumpAddresses, instruction.getOperandB());
             }
         }
     }
     
-    private void resolveJumpMarking(Operand operand) throws SemanticException {
+    private void resolveJumpMarking(Map<String, Integer> jumpAddresses, Operand operand) throws SemanticException {
         if (operand instanceof JumpMarkOperand) {
             final JumpMarkOperand jumpMarkOperand = (JumpMarkOperand) operand;
-            final String jumpMarking = jumpMarkOperand.getJumpMarking();
-            final Integer jumpMarkAddress = this.jumpMarkings.get(jumpMarking);
+            final String aJumpMarking = jumpMarkOperand.getJumpMarking();
+            final Integer jumpMarkAddress = jumpAddresses.get(aJumpMarking);
 
             if (jumpMarkAddress == null) {
-                throw new SemanticException("Label \"" + jumpMarking + "\" is not defined.");
+                throw new SemanticException("Label \"" + aJumpMarking + "\" is not defined.");
             } else {
                 jumpMarkOperand.resolveMarking(jumpMarkAddress);
             }
@@ -111,22 +130,19 @@ public class DCPUCode {
         resolveJumpMarkings();
 
         DataOutputStream dataOut = new DataOutputStream(out);
-        for (Instruction instruction : instructions) {
-            instruction.store(dataOut);
-
+        for (final Instruction instruction : instructions) {
+            if (instruction.getOperation() != Operation.DAT) {
+                //DAT is not stored
+                instruction.store(dataOut);
+            }
+            
             //store possible additional parameters
-            if (instruction.getOperation().getParameterCount() == 1) {
-                if (instruction.getOperandA().hasAdditionalWord()) {
-                    Word word = new Word();
-                    word.setSignedInt(instruction.getOperandA().getAdditionalWord());
-                    word.store(dataOut);
-                }
-            } else {
-                if (instruction.getOperandA().hasAdditionalWord()) {
-                    Word word = new Word();
-                    word.setSignedInt(instruction.getOperandA().getAdditionalWord());
-                    word.store(dataOut);
-                }
+            if (instruction.getOperandA().hasAdditionalWord()) {
+                Word word = new Word();
+                word.setSignedInt(instruction.getOperandA().getAdditionalWord());
+                word.store(dataOut);
+            }            
+            if (instruction.getOperation().getParameterCount() == 2) {
                 if (instruction.getOperandB().hasAdditionalWord()) {
                     Word word = new Word();
                     word.setSignedInt(instruction.getOperandB().getAdditionalWord());
@@ -142,8 +158,8 @@ public class DCPUCode {
         int lineNo = 0;
         for (Instruction instruction : instructions) {
             final String line = instruction.toString();
-            final String jumpLabel = this.jumpMarkingsReverse.containsKey(lineNo) 
-                    ? this.jumpMarkingsReverse.get(lineNo) + ":"
+            final String jumpLabel = this.jumpMarkings.containsKey(instruction) 
+                    ? this.jumpMarkings.get(instruction) + ":"
                     : "";
             sb.append(String.format("%04d\t%20s\t%s\n", lineNo++, jumpLabel, line));
         }

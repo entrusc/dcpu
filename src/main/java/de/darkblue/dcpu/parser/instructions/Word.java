@@ -44,15 +44,15 @@ public class Word {
     }
     
     public void inc() {
-        this.add(ONE);
+        this.addLocal(ONE);
     }
     
-    public boolean add(Word other) {
+    public boolean addLocal(Word other) {
         this.setWord(this.word + other.word);
         return checkOverOrUnderflow();
     }
     
-    public boolean subtract(Word other) {
+    public boolean subtractLocal(Word other) {
         this.setWord(word - other.word);
         return checkOverOrUnderflow();
     }    
@@ -159,11 +159,11 @@ public class Word {
         this.word = word;
         
         if (changed) {
-            onValueUpdated();
+            notifyOnValueUpdated();
         }
     }
     
-    private synchronized void onValueUpdated() {
+    private synchronized void notifyOnValueUpdated() {
         for (WordChangeListener listener : listeners) {
             listener.onValueChanged(this);
         }
@@ -178,6 +178,28 @@ public class Word {
     public String toString() {
         return String.format("%02x%02x", ((word >> 8) & 0xFF), (word & 0xFF));
     }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 29 * hash + this.word;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Word other = (Word) obj;
+        if (this.word != other.word) {
+            return false;
+        }
+        return true;
+    }
     
     public String toBinaryString() {
         return fill(Integer.toBinaryString(((word >> 8) & 0xFF)), '0', 8) 
@@ -191,6 +213,10 @@ public class Word {
         }
         sb.append(str);
         return sb.toString();
+    }
+
+    public void dec() {
+        this.subtractLocal(ONE);
     }
     
 }

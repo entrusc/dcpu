@@ -54,7 +54,7 @@ public class JumpMarkDereferencedOperand extends JumpMarkOperand {
 
     @Override
     public boolean hasAdditionalWord() {
-        return literalOperand.hasAdditionalWord();
+        return true; //always true
     }
 
     @Override

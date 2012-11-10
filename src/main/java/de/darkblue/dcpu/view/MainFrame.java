@@ -17,7 +17,7 @@
 package de.darkblue.dcpu.view;
 
 import de.darkblue.dcpu.interpreter.DCPU;
-import de.darkblue.dcpu.interpreter.MemoryListener;
+import de.darkblue.dcpu.interpreter.DCPUListener;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.DCPUCode;
 import de.darkblue.dcpu.parser.Parser;
@@ -50,6 +50,8 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 public class MainFrame extends javax.swing.JFrame {
 
     private static final Icon ICON_LINE_ERROR = SwingUtils.loadIcon("process-stop-3.png");
+    private static final Icon ICON_RUN = SwingUtils.loadIcon("arrow-right-3.png");
+    private static final Icon ICON_STOP = SwingUtils.loadIcon("media-playback-stop-7.png");
     
     private RSyntaxTextArea codeArea;
     private final DCPU dcpu;
@@ -65,7 +67,7 @@ public class MainFrame extends javax.swing.JFrame {
      */
     public MainFrame(DCPU dcpu) {
         this.dcpu = dcpu;
-        this.dcpu.registerListener(new MemoryListener() {
+        this.dcpu.registerListener(new DCPUListener() {
 
             @Override
             public void onRamValueChanged(DCPU dcpu, Word position) {
@@ -79,12 +81,31 @@ public class MainFrame extends javax.swing.JFrame {
                     resetButton.setEnabled(true);
                 }
             }
+
+            @Override
+            public void onStartEmulation(DCPU dcpu) {
+                runButton.setIcon(ICON_STOP);
+                nextStepButton.setEnabled(false);
+            }
+
+            @Override
+            public void onStopEmulation(DCPU dcpu) {
+                runButton.setIcon(ICON_RUN);
+                nextStepButton.setEnabled(true);
+            }
+
+            @Override
+            public void onResetEmulation(DCPU dcpu) {
+            }
+
+            @Override
+            public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
+            }
             
         });
         
         initComponents();
         initCodeArea();
-        initRamArea();
         
         this.setLocationRelativeTo(null);
         final Point location = this.getLocation();
@@ -99,11 +120,6 @@ public class MainFrame extends javax.swing.JFrame {
         this.registersFrame.setLocation(memoryFrameLocation.x + memoryFrame.getWidth() - registersFrame.getWidth(), 
                 location.y + this.getHeight() / 2 - this.registersFrame.getHeight());
         this.registersFrame.setVisible(true);
-    }
-    
-    private void initRamArea() {
-//        ramEditor = new HexEditor();
-//        this.jSplitPane2.setRightComponent(ramEditor);
     }
     
     private void setNeedsCompilation(boolean needsCompilation) {
@@ -122,7 +138,6 @@ public class MainFrame extends javax.swing.JFrame {
     
     private void initCodeArea() {
         this.codeArea = new RSyntaxTextArea(new RSyntaxDocument(new DasmTokenMakerFactory(), "dasm"));
-//        this.codeArea.setPreferredSize(new Dimension(500, 500));
         
         this.codeArea.setCodeFoldingEnabled(true);
         this.codeArea.setAntiAliasingEnabled(true);
@@ -192,6 +207,7 @@ public class MainFrame extends javax.swing.JFrame {
             final ByteArrayOutputStream byteOut = 
                     new ByteArrayOutputStream();
             compiledCode.store(byteOut);
+            byteOut.flush();
             
             final ByteArrayInputStream byteIn = 
                     new ByteArrayInputStream(byteOut.toByteArray());
@@ -204,8 +220,9 @@ public class MainFrame extends javax.swing.JFrame {
             //should not happen
         } catch (ParserException e) {
             this.setGutterIcon(e.getAffectedLineNo(), ICON_LINE_ERROR);
+            this.errorPanel.setText(e.getPlainMessage());
         } catch (SemanticException e) {
-            
+            this.errorPanel.setText(e.getMessage());
         }
     }
 
@@ -231,8 +248,11 @@ public class MainFrame extends javax.swing.JFrame {
         resetButton = new javax.swing.JButton();
         runButton = new javax.swing.JButton();
         nextStepButton = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        errorPanel = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("DCPU");
         setMinimumSize(new java.awt.Dimension(300, 200));
         setPreferredSize(new java.awt.Dimension(1024, 600));
 
@@ -305,6 +325,11 @@ public class MainFrame extends javax.swing.JFrame {
         runButton.setFocusable(false);
         runButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         runButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        runButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                runButtonActionPerformed(evt);
+            }
+        });
         jToolBar1.add(runButton);
 
         nextStepButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/arrow-right-double.png"))); // NOI18N
@@ -322,6 +347,12 @@ public class MainFrame extends javax.swing.JFrame {
 
         getContentPane().add(jToolBar1, java.awt.BorderLayout.PAGE_START);
 
+        errorPanel.setColumns(20);
+        errorPanel.setRows(5);
+        jScrollPane1.setViewportView(errorPanel);
+
+        getContentPane().add(jScrollPane1, java.awt.BorderLayout.PAGE_END);
+
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
@@ -338,8 +369,17 @@ public class MainFrame extends javax.swing.JFrame {
         resetButton.setEnabled(false);
     }//GEN-LAST:event_resetButtonActionPerformed
 
+    private void runButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runButtonActionPerformed
+        if (dcpu.isRunning()) {
+            dcpu.stop();
+        } else {
+            dcpu.start();
+        }
+    }//GEN-LAST:event_runButtonActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton compileButton;
+    private javax.swing.JTextArea errorPanel;
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
     private javax.swing.Box.Filler filler3;
@@ -348,6 +388,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JToolBar jToolBar1;
     private javax.swing.JButton nextStepButton;
     private javax.swing.JButton resetButton;

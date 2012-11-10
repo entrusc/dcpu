@@ -17,7 +17,6 @@
 
 package de.darkblue.dcpu.parser;
 
-import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
 import de.darkblue.dcpu.interpreter.Register;
 import de.darkblue.dcpu.parser.instructions.Instruction;
 import de.darkblue.dcpu.parser.instructions.Operation;
@@ -33,11 +32,7 @@ import de.darkblue.dcpu.parser.instructions.operands.RegisterDereferencedOperand
 import de.darkblue.dcpu.parser.instructions.operands.RegisterOperand;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
-import org.reflections.Reflections;
 
 /**
  *
@@ -241,7 +236,7 @@ public class Parser {
      */
     private Integer getNumberToken(String token) {
         if (HEX_NUMBER_PATTERN.matcher(token).matches()) {
-            return Integer.valueOf(token, 16);
+            return Integer.valueOf(token.substring(2), 16);
         } else
             if (DEC_NUMBER_PATTERN.matcher(token).matches()) {
                 return Integer.valueOf(token, 10);

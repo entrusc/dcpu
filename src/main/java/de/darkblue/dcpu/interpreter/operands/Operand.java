@@ -53,6 +53,6 @@ public abstract class Operand {
      * 
      * @return 
      */
-    public abstract Command additionalCommand();
+    public abstract Command additionalCommand(OperandMode mode);
     
 }

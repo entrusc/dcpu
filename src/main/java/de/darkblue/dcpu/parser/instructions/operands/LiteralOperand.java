@@ -26,9 +26,14 @@ import de.darkblue.dcpu.parser.instructions.Operand;
 public class LiteralOperand extends Operand {
 
     private final int value;
+    private boolean forceNextWordStorage = false;
     
     public LiteralOperand(int value) {
         this.value = value;
+    }
+
+    public void setForceNextWordStorage(boolean forceNextWordStorage) {
+        this.forceNextWordStorage = forceNextWordStorage;
     }
 
     @Override
@@ -49,7 +54,8 @@ public class LiteralOperand extends Operand {
     public boolean hasAdditionalWord() {
         //values -1 .. 30 are stored directly in the instruction (if operand is operand A)
         //otherwise the value is stored in an additional word
-        return (operandMode == OperandMode.MODE_OPERAND_A && !(value >= -1 && value <= 30));
+        return forceNextWordStorage 
+                || !(operandMode == OperandMode.MODE_OPERAND_A && value >= -1 && value <= 30);
     }
 
     @Override
