@@ -28,7 +28,7 @@ import de.darkblue.dcpu.parser.instructions.Word;
  * @author Florian Frankenberger
  */
 @InstructionDefinition(operation=Operation.ADD)
-public class AddInstruction extends Instruction {
+public class ADDXInstruction extends Instruction {
 
     @Override
     public Command[] execute(final Word... operands) {
@@ -38,8 +38,8 @@ public class AddInstruction extends Instruction {
 
                 @Override
                 public void execute(DCPU dcpu) {
-                    final boolean overUnderFlow = operands[0].addLocal(operands[1]);
-                    dcpu.getEx().set(overUnderFlow ? Word.ONE : Word.ZERO);
+                    final Word overUnderFlow = operands[0].addLocal(operands[1]);
+                    dcpu.getEx().set(overUnderFlow);
                 }
                 
             }
