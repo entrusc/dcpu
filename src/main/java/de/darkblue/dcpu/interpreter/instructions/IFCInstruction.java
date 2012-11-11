@@ -40,6 +40,7 @@ public class IFCInstruction extends Instruction {
                 public void execute(DCPU dcpu) {
                     if (!operands[0].and(operands[1]).equals(Word.ZERO)) {
                         dcpu.getPc().inc(); //skip next instruction
+                        dcpu.setSkipNextInstructionIfConditional(); //condition chaining
                     }
                 }
                 

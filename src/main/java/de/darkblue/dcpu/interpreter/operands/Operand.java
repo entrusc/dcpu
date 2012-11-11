@@ -39,7 +39,10 @@ public abstract class Operand {
     
     /**
      * returns the memory cell that is designated by
-     * this operand either to set or read from
+     * this operand either to set or read from. Note that no
+     * side effects other than an increasing in pc is allowed
+     * here - all other side effects have to put in the additional
+     * command (because it is possible they are skipped).
      * 
      * @param dcpu the dcpu interpreter
      * @param mode determines if this operand is A or B

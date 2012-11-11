@@ -17,11 +17,26 @@
 package de.darkblue.dcpu.interpreter;
 
 /**
- * Represents a command that is executed in one cycle within the d
+ * Represents a command that is executed in one cycle within the dcpu
+ * 
  * @author Florian Frankenberger
  */
-public interface Command {
+public abstract class Command {
+
+    private final boolean needsDcpuCyle;
+
+    public Command() {
+        this(true); //default: need one cycle to execute
+    }
+
+    public Command(boolean needsCpuCyle) {
+        this.needsDcpuCyle = needsCpuCyle;
+    }
+
+    public boolean isNeedsDcpuCyle() {
+        return needsDcpuCyle;
+    }
     
-    void execute(DCPU dcpu);
+    public abstract void execute(DCPU dcpu);
     
 }

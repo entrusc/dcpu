@@ -28,9 +28,13 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.reflections.Reflections;
@@ -49,7 +53,7 @@ public class DCPU {
     private static final Map<Integer, Class<? extends Instruction>> REGISTERED_INSTRUCTIONS = new HashMap<>();
     private static final Map<Integer, Class<? extends Operand>> REGISTERED_OPERANDS = new HashMap<>();
     
-    private static final long DEFAULT_HZ = 16_000_000; //16 MHz
+    private static final long DEFAULT_HZ = 100_000; //100 kHz
     
     static {
         final Reflections reflectionsInstructions = new Reflections(PACKAGE_INSTRUCTIONS);
@@ -85,6 +89,8 @@ public class DCPU {
     private final Set<DCPUListener> listeners = new HashSet<>();
     private Thread runThread = null;
     private volatile boolean stop = false;
+    
+    private boolean skipNextInstructionIfConditional = false;
 
     public DCPU() {
         initRam();
@@ -129,6 +135,14 @@ public class DCPU {
                 
             });
         }
+    }
+    
+    /**
+     * tells the emulator to skip the next instruction
+     * if it is a conditional one
+     */
+    public void setSkipNextInstructionIfConditional() {
+        this.skipNextInstructionIfConditional = true;
     }
     
     /**
@@ -200,6 +214,7 @@ public class DCPU {
         stop();
         clearRegisters();
         clearRam();
+        skipNextInstructionIfConditional = false;
         
         resetRam();
         this.setCpuCycles(0);
@@ -222,7 +237,7 @@ public class DCPU {
             }
         }
         
-        Instruction instruction = instantiate(instructionClass);
+        final Instruction instruction = instantiate(instructionClass);
 
         if (instruction.getOperation().getParameterCount() == 2 && !instructionBinary.hasTwoOperandsAsInstruction()) {
             throw new IllegalStateException(instruction.getOperation() + " expects 2 parameters but binary code has only 1");
@@ -230,18 +245,32 @@ public class DCPU {
             if (instruction.getOperation().getParameterCount() == 1 && instructionBinary.hasTwoOperandsAsInstruction()) {
                 throw new IllegalStateException(instruction.getOperation() + " expects 1 parameter but binary code has 2");
             }
+
+        final List<Command> commands = new ArrayList<>();
+        final OperandResult operandAResult = getOperand(instructionBinary.getOperandA(), OperandMode.MODE_OPERAND_A);
+        commands.add(operandAResult.command);
         
-        final Word operandACell = getOperandMemoryCell(instructionBinary.getOperandA(), OperandMode.MODE_OPERAND_A);
-        final Command[] commands;
         if (instruction.getOperation().getParameterCount() == 2) {
-            final Word operandBCell = getOperandMemoryCell(instructionBinary.getOperandB(), OperandMode.MODE_OPERAND_B);
-            commands = instruction.execute(operandBCell, operandACell);
+            final OperandResult operandBResult = getOperand(instructionBinary.getOperandB(), OperandMode.MODE_OPERAND_B);
+            commands.add(operandBResult.command);
+            commands.addAll(Arrays.asList(instruction.execute(operandBResult.cell, operandAResult.cell)));
         } else {
-            commands = instruction.execute(operandACell);
+            commands.addAll(Arrays.asList(instruction.execute(operandAResult.cell)));
         }
         
         this.getPc().inc();
-        executeCommands(commands);
+        
+        //special handling for condition chainin
+        if (!skipNextInstructionIfConditional || 
+                (skipNextInstructionIfConditional && !instruction.getOperation().isCondition())) {
+            executeCommands(commands);
+            
+            if (skipNextInstructionIfConditional && !instruction.getOperation().isCondition()) {
+                skipNextInstructionIfConditional = false; //reached a non conditional statement - so we disable the chaining here
+            }
+        } else {
+            executeCommand(new NopCommand()); //skip a conditional command only at the cost of one cycle
+        }
     }
     
     public synchronized void start() {
@@ -284,7 +313,7 @@ public class DCPU {
         return this.runThread != null;
     }
     
-    private Word getOperandMemoryCell(int operandCode, OperandMode operandMode) {
+    private OperandResult getOperand(int operandCode, OperandMode operandMode) {
         final Class<? extends Operand> operandClass = REGISTERED_OPERANDS.get(operandCode);
         if (operandClass == null) {
             throw new IllegalStateException("Operand " + String.format("0x%02x", operandCode) + " unknown");
@@ -295,32 +324,37 @@ public class DCPU {
         final Word memoryCell = operand.getMemoryCell(this, operandMode);
         final Command command = operand.additionalCommand(operandMode);
         
-        executeCommand(command);
-        return memoryCell;
+        return new OperandResult(memoryCell, command);
     }
     
-    private void executeCommands(Command[] commands) {
+    private void executeCommands(final Collection<Command> commands) {
         for (final Command command : commands) {
             executeCommand(command);
         }
     }
     
-    private void executeCommand(Command command) {
+    private void executeCommand(final Command command) {
         if (command != null) {
             command.execute(this);
-            this.setCpuCycles(this.cpuCycles + 1);
             
-            long timePassed = System.nanoTime() - lastCommandExecution;
-            if (timePassed < timePerCycle) {
-                long timeToSleep = timePerCycle - timePassed;
-                try {
-                    Thread.sleep(timeToSleep / 1_000_000L, (int)(timeToSleep % 1_000_000));
-                } catch (InterruptedException ex) {
-                    //ignore
+            //the command eats up a cpu cycle only
+            //if this is intended - otherwise the command is "just" executed
+            //without notic
+            if (command.isNeedsDcpuCyle()) {
+                this.setCpuCycles(this.cpuCycles + 1);
+
+                long timePassed = System.nanoTime() - lastCommandExecution;
+                if (timePassed < timePerCycle) {
+                    long timeToSleep = timePerCycle - timePassed;
+                    try {
+                        Thread.sleep(timeToSleep / 1_000_000L, (int)(timeToSleep % 1_000_000));
+                    } catch (InterruptedException ex) {
+                        //ignore
+                    }
                 }
+
+                lastCommandExecution = System.nanoTime();
             }
-            
-            lastCommandExecution = System.nanoTime();
         }
     }
     

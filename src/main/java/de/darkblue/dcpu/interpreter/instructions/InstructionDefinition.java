@@ -39,5 +39,5 @@ public @interface InstructionDefinition {
      * @return 
      */
     Operation operation();
-        
+    
 }

@@ -60,6 +60,22 @@ public class Word {
     }
     
     /**
+     * adds the other word to a new(!) word
+     * that is set to this word's value. This
+     * new word is returned - over or underflow
+     * is handled but not returned.
+     * 
+     * @param word
+     * @return 
+     */
+    public Word add(Word word) {
+        final Word result = new Word();
+        result.set(this);
+        result.addLocal(word);
+        return result;
+    }
+    
+    /**
      * subtracts the other word from this one and
      * returns a word that represents the underflow register.
      * 
@@ -70,6 +86,22 @@ public class Word {
         this.setWord(word - other.word);
         return checkOverOrUnderflow();
     }    
+    
+    /**
+     * subtracts the other word from a new(!) word
+     * that is set to this word's value. This
+     * new word is returned - over or underflow
+     * is handled but not returned.
+     * 
+     * @param word
+     * @return 
+     */
+    public Word subtract(Word word) {
+        final Word result = new Word();
+        result.set(this);
+        result.subtractLocal(word);
+        return result;
+    }
     
     public Word multiplyLocal(Word other) {
         this.word = word * other.word;

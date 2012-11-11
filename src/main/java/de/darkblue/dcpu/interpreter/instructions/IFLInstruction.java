@@ -40,6 +40,7 @@ public class IFLInstruction extends Instruction {
                 public void execute(DCPU dcpu) {
                     if (!operands[0].lowerThan(operands[1])) {
                         dcpu.getPc().inc(); //skip next instruction
+                        dcpu.setSkipNextInstructionIfConditional(); //condition chaining
                     }
                 }
                 

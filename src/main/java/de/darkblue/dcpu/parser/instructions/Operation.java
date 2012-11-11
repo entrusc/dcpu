@@ -40,14 +40,16 @@ public enum Operation {
     SHR(0x0d, 2),
     ASR(0x0e, 2),
     SHL(0x0f, 2),
-    IFB(0x10, 2),
-    IFC(0x11, 2),
-    IFE(0x12, 2),
-    IFN(0x13, 2),
-    IFG(0x14, 2),
-    IFA(0x15, 2),
-    IFL(0x16, 2),
-    IFU(0x17, 2),
+    
+    IFB(0x10, 2, true),
+    IFC(0x11, 2, true),
+    IFE(0x12, 2, true),
+    IFN(0x13, 2, true),
+    IFG(0x14, 2, true),
+    IFA(0x15, 2, true),
+    IFL(0x16, 2, true),
+    IFU(0x17, 2, true),
+    
     ADX(0x1a, 2),
     SBX(0x1b, 2),
     STI(0x1e, 2),
@@ -73,10 +75,16 @@ public enum Operation {
     }
     private final int opcode;
     private final int parameterCount;
+    private final boolean condition;
 
     private Operation(int opcode, int parameterCount) {
+        this(opcode, parameterCount, false);
+    }
+    
+    private Operation(int opcode, int parameterCount, boolean condition) {
         this.opcode = opcode;
         this.parameterCount = parameterCount;
+        this.condition = condition;
     }
 
     public int getOpcode() {
@@ -89,6 +97,10 @@ public enum Operation {
 
     public static Operation parse(String raw) {
         return OERATION_LOOKUP.get(raw.toLowerCase());
+    }
+
+    public boolean isCondition() {
+        return condition;
     }
 
     @Override

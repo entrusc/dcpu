@@ -21,7 +21,7 @@ package de.darkblue.dcpu.interpreter;
  * The No OPeration (NOP) command
  * @author Florian Frankenberger
  */
-public class NopCommand implements Command {
+public class NopCommand extends Command {
 
     @Override
     public void execute(DCPU dcpu) {

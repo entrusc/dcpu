@@ -40,6 +40,7 @@ public class IFUInstruction extends Instruction {
                 public void execute(DCPU dcpu) {
                     if (!operands[0].lowerThanSigned(operands[1])) {
                         dcpu.getPc().inc(); //skip next instruction
+                        dcpu.setSkipNextInstructionIfConditional(); //condition chaining
                     }
                 }
                 

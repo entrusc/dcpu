@@ -31,18 +31,26 @@ public class PushOrPopOperand extends Operand {
     @Override
     public Word getMemoryCell(DCPU dcpu, OperandMode mode) {
         if (mode == OperandMode.MODE_OPERAND_B) {
-            dcpu.getSp().dec();
-            return dcpu.getRam(dcpu.getSp());
+            return dcpu.getRam(dcpu.getSp().subtract(Word.ONE));
         } else {
-            Word cell = dcpu.getRam(dcpu.getSp());
-            dcpu.getSp().inc();
-            return cell;
+            return dcpu.getRam(dcpu.getSp());
         }
     }
 
     @Override
-    public Command additionalCommand(OperandMode mode) {
-        return null;
+    public Command additionalCommand(final OperandMode mode) {
+        return new Command(false) { //out of unknown reason this does not count as work for notch ;)
+
+            @Override
+            public void execute(DCPU dcpu) {
+                if (mode == OperandMode.MODE_OPERAND_B) {
+                    dcpu.getSp().dec();
+                } else {
+                    dcpu.getSp().inc();
+                }
+            }
+            
+        };
     }
 
 }

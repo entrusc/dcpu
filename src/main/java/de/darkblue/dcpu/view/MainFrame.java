@@ -24,18 +24,22 @@ import de.darkblue.dcpu.parser.Parser;
 import de.darkblue.dcpu.parser.ParserException;
 import de.darkblue.dcpu.parser.SemanticException;
 import de.darkblue.dcpu.parser.instructions.Word;
-import java.awt.Color;
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Icon;
+import javax.swing.JFileChooser;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.text.BadLocationException;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
@@ -52,6 +56,18 @@ public class MainFrame extends javax.swing.JFrame {
     private static final Icon ICON_LINE_ERROR = SwingUtils.loadIcon("process-stop-3.png");
     private static final Icon ICON_RUN = SwingUtils.loadIcon("arrow-right-3.png");
     private static final Icon ICON_STOP = SwingUtils.loadIcon("media-playback-stop-7.png");
+    private static final FileFilter FILE_FILTER = new FileFilter() {
+
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".asm") || f.getName().endsWith(".dasm");
+            }
+
+            @Override
+            public String getDescription() {
+                return ".asm / .dasm DCPU Assembler File";
+            }
+        };
     
     private RSyntaxTextArea codeArea;
     private final DCPU dcpu;
@@ -61,6 +77,8 @@ public class MainFrame extends javax.swing.JFrame {
     
     private volatile boolean needsCompilation = true;
     private RTextScrollPane codeScrollPane;
+    
+    private File codeFile = null;
     
     /**
      * Creates new form MainFrame
@@ -136,6 +154,11 @@ public class MainFrame extends javax.swing.JFrame {
         }
     }
     
+    private void onUpdate() {
+        setNeedsCompilation(true);
+        this.saveButton.setEnabled(true);
+    }
+    
     private void initCodeArea() {
         this.codeArea = new RSyntaxTextArea(new RSyntaxDocument(new DasmTokenMakerFactory(), "dasm"));
         
@@ -148,17 +171,17 @@ public class MainFrame extends javax.swing.JFrame {
 
             @Override
             public void insertUpdate(DocumentEvent e) {
-                setNeedsCompilation(true);
+                onUpdate();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                setNeedsCompilation(true);
+                onUpdate();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                setNeedsCompilation(true);
+                onUpdate();
             }
             
         });
@@ -250,13 +273,10 @@ public class MainFrame extends javax.swing.JFrame {
     private void initComponents() {
 
         jToolBar1 = new javax.swing.JToolBar();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
-        jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
-        filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
+        newButton = new javax.swing.JButton();
+        openButton = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
+        filler4 = new javax.swing.Box.Filler(new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 32767));
         compileButton = new javax.swing.JButton();
         filler3 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
         resetButton = new javax.swing.JButton();
@@ -276,40 +296,40 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.setFloatable(false);
         jToolBar1.setRollover(true);
 
-        jButton1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-new-5.png"))); // NOI18N
-        jButton1.setFocusable(false);
-        jButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton1);
+        newButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-new-5.png"))); // NOI18N
+        newButton.setFocusable(false);
+        newButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        newButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        newButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                newButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(newButton);
 
-        jButton2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-open-5.png"))); // NOI18N
-        jButton2.setFocusable(false);
-        jButton2.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton2.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton2);
+        openButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-open-5.png"))); // NOI18N
+        openButton.setFocusable(false);
+        openButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        openButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        openButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                openButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(openButton);
 
-        jButton3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-export.png"))); // NOI18N
-        jButton3.setEnabled(false);
-        jButton3.setFocusable(false);
-        jButton3.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton3.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton3);
-        jToolBar1.add(filler1);
-
-        jButton4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/edit-undo-8.png"))); // NOI18N
-        jButton4.setEnabled(false);
-        jButton4.setFocusable(false);
-        jButton4.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton4.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton4);
-
-        jButton5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/edit-redo-8.png"))); // NOI18N
-        jButton5.setEnabled(false);
-        jButton5.setFocusable(false);
-        jButton5.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton5.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToolBar1.add(jButton5);
-        jToolBar1.add(filler2);
+        saveButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-export.png"))); // NOI18N
+        saveButton.setEnabled(false);
+        saveButton.setFocusable(false);
+        saveButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        saveButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(saveButton);
+        jToolBar1.add(filler4);
 
         compileButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/cog.png"))); // NOI18N
         compileButton.setEnabled(false);
@@ -420,23 +440,90 @@ public class MainFrame extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_runButtonActionPerformed
 
+    private void newButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newButtonActionPerformed
+        codeArea.setText("");
+        this.codeFile = null;
+        this.saveButton.setEnabled(false);
+    }//GEN-LAST:event_newButtonActionPerformed
+
+    private void openButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_openButtonActionPerformed
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(FILE_FILTER);
+        int returnVal = fileChooser.showOpenDialog(this);
+
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            final File file = fileChooser.getSelectedFile();
+            try {
+                try (FileReader reader = new FileReader(file)) {
+                    StringBuilder sb = new StringBuilder();
+                    char[] buffer = new char[512];
+                    int read = 0;
+                    do {
+                        read = reader.read(buffer);
+                        if (read > 0) {
+                            sb.append(buffer, 0, read);
+                        }
+                    } while (read >= 0);
+                    this.codeArea.setText(sb.toString());
+                    this.saveButton.setEnabled(false);
+                    this.codeFile = file;
+                }
+            } catch (IOException e) {
+                
+            }
+        }
+    }//GEN-LAST:event_openButtonActionPerformed
+
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        if (this.codeFile == null) {
+            final JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileFilter(FILE_FILTER);
+
+            int returnVal = fileChooser.showSaveDialog(this);
+
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+                final File file = fileChooser.getSelectedFile();
+                saveCodeTo(file);      
+                this.codeFile = file;
+            }
+        } else {
+            saveCodeTo(this.codeFile);
+        }
+    }//GEN-LAST:event_saveButtonActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton compileButton;
     private javax.swing.JPanel errorPanel;
     private javax.swing.JTextArea errorText;
-    private javax.swing.Box.Filler filler1;
-    private javax.swing.Box.Filler filler2;
     private javax.swing.Box.Filler filler3;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
+    private javax.swing.Box.Filler filler4;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JToolBar jToolBar1;
+    private javax.swing.JButton newButton;
     private javax.swing.JButton nextStepButton;
+    private javax.swing.JButton openButton;
     private javax.swing.JButton resetButton;
     private javax.swing.JButton runButton;
+    private javax.swing.JButton saveButton;
     // End of variables declaration//GEN-END:variables
+
+    private void saveCodeTo(final File file) {
+        try {
+            try (FileWriter writer = new FileWriter(file)) {
+                StringReader stringReader = new StringReader(this.codeArea.getText());
+                char[] buffer = new char[512];
+                int read = 0;
+                do {
+                    read = stringReader.read(buffer);
+                    if (read > 0) {
+                        writer.write(buffer, 0, read);
+                    }
+                } while (read >= 0);
+                this.saveButton.setEnabled(false);
+            }
+        } catch (IOException e) {
+            
+        }
+    }
 }
