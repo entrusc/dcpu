@@ -47,27 +47,69 @@ public class Word {
         this.addLocal(ONE);
     }
     
-    public boolean addLocal(Word other) {
+    /**
+     * adds the other word to this one and returns
+     * a word that represents the overflow register.
+     * 
+     * @param other
+     * @return 
+     */
+    public Word addLocal(Word other) {
         this.setWord(this.word + other.word);
         return checkOverOrUnderflow();
     }
     
-    public boolean subtractLocal(Word other) {
+    /**
+     * subtracts the other word from this one and
+     * returns a word that represents the underflow register.
+     * 
+     * @param other
+     * @return 
+     */
+    public Word subtractLocal(Word other) {
         this.setWord(word - other.word);
         return checkOverOrUnderflow();
     }    
     
-    private boolean checkOverOrUnderflow() {
-        boolean overOrUnderflow = false;
+    public Word multiplyLocal(Word other) {
+        this.word = word * other.word;
+        final Word overflowWord = new Word();
+        if (this.word > 0xFFFF) {
+            overflowWord.setUnsignedInt((this.word >> 16) & 0xFFFF);
+        }
+        this.setUnsignedInt(word & 0xFFFF);
+        return overflowWord;
+    }
+    
+    public Word multiplySignedLocal(Word other) {
+        int value = signedIntValue() * other.signedIntValue();
+        final Word overflowWord = new Word();
+        if (this.word > 127 || this.word < -128) {
+            overflowWord.setSignedInt((this.word >> 16) & 0xFFFF);
+        }
+        this.setSignedInt(value);
+        return overflowWord;
+    }
+    
+    public void modLocal(Word other) {
+        if (other.equals(Word.ZERO)) {
+            this.set(Word.ZERO);
+        } else {
+            setWord(word % other.word);
+        }
+    }
+    
+    private Word checkOverOrUnderflow() {
+        final Word overUnderflowRegister = new Word();
         while (this.word > 0xFFFF) {
             this.setWord(this.word - 0xFFFF);
-            overOrUnderflow = true;
+            overUnderflowRegister.set(Word.ONE);
         }
         while (this.word < 0) {
             this.setWord(0xFFFF - this.word);
-            overOrUnderflow = true;
+            overUnderflowRegister.set(Word.ONE);
         }
-        return overOrUnderflow;
+        return overUnderflowRegister;
     }
     
     public void setInstruction(Instruction instruction) {
@@ -218,5 +260,71 @@ public class Word {
     public void dec() {
         this.subtractLocal(ONE);
     }
+
+    public Word and(Word other) {
+        final Word result = new Word();
+        result.word = this.word & other.word; 
+        return result;
+    }
+    
+    public Word or(Word other) {
+        final Word result = new Word();
+        result.word = this.word | other.word; 
+        return result;
+    }    
+    
+    public Word xor(Word other) {
+        final Word result = new Word();
+        result.word = this.word ^ other.word; 
+        return result;
+    }
+
+    /**
+     * unsigned >. tells basically if the unsigned
+     * numeric representation is bigger than the other
+     * word
+     * 
+     * @param other
+     * @return 
+     */
+    public boolean greaterThan(Word other) {
+        return this.unsignedIntValue() > other.unsignedIntValue();
+    }
+    
+    /**
+     * signed >. tells basically if the signed
+     * numeric representation is bigger than the other
+     * word
+     * 
+     * @param other
+     * @return 
+     */
+    public boolean greaterThanSigned(Word other) {
+        return this.signedIntValue() > other.signedIntValue();
+    }
+    
+    /**
+     * unsigned <. tells basically if the unsigned
+     * numeric representation is lower than the other
+     * word
+     * 
+     * @param other
+     * @return 
+     */
+    public boolean lowerThan(Word other) {
+        return this.unsignedIntValue() < other.unsignedIntValue();
+    }    
+    
+    /**
+     * signed <. tells basically if the signed
+     * numeric representation is lower than the other
+     * word
+     * 
+     * @param other
+     * @return 
+     */
+    public boolean lowerThanSigned(Word other) {
+        return this.signedIntValue() < other.signedIntValue();
+    }     
     
 }
