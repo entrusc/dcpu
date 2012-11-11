@@ -28,7 +28,7 @@ import de.darkblue.dcpu.parser.instructions.Word;
  * @author Florian Frankenberger
  */
 @InstructionDefinition(operation=Operation.ADD)
-public class ADDXInstruction extends Instruction {
+public class ADDInstruction extends Instruction {
 
     @Override
     public Command[] execute(final Word... operands) {
