@@ -67,10 +67,12 @@ public enum Operation {
     
     DAT(0x00, 1); //not specified in standard but common practice
     
-    private static final Map<String, Operation> OERATION_LOOKUP = new HashMap<>();
+    private static final Map<String, Operation> OPERATION_LOOKUP_BY_ASM = new HashMap<>();
+    private static final Map<OpcodeLookup, Operation> OPERATION_LOOKUP_BY_OPCODE = new HashMap<>();
     static {
         for (Operation operation : Operation.values()) {
-            OERATION_LOOKUP.put(operation.name().toLowerCase(), operation);
+            OPERATION_LOOKUP_BY_ASM.put(operation.name().toLowerCase(), operation);
+            OPERATION_LOOKUP_BY_OPCODE.put(new OpcodeLookup(operation.getOpcode(), operation.getParameterCount()), operation);
         }
     }
     private final int opcode;
@@ -95,10 +97,14 @@ public enum Operation {
         return parameterCount;
     }
 
-    public static Operation parse(String raw) {
-        return OERATION_LOOKUP.get(raw.toLowerCase());
+    public static Operation getByASM(String raw) {
+        return OPERATION_LOOKUP_BY_ASM.get(raw.toLowerCase());
     }
 
+    public static Operation getByOpcode(int opcode, int parameterCount) {
+        return OPERATION_LOOKUP_BY_OPCODE.get(new OpcodeLookup(opcode, parameterCount));
+    }
+    
     public boolean isCondition() {
         return condition;
     }
@@ -106,6 +112,43 @@ public enum Operation {
     @Override
     public String toString() {
         return this.name();
+    }
+    
+    private static class OpcodeLookup {
+        private final int opcode;
+        private final int parameterCount;
+
+        public OpcodeLookup(int opcode, int parameterCount) {
+            this.opcode = opcode;
+            this.parameterCount = parameterCount;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 29 * hash + this.opcode;
+            hash = 29 * hash + this.parameterCount;
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final OpcodeLookup other = (OpcodeLookup) obj;
+            if (this.opcode != other.opcode) {
+                return false;
+            }
+            if (this.parameterCount != other.parameterCount) {
+                return false;
+            }
+            return true;
+        }
+        
     }
     
 }

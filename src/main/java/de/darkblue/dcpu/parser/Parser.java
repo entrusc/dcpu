@@ -99,12 +99,12 @@ public class Parser {
 
         //now we check if the actual instruction really awaits this amount
         //of operands (= syntax check)
-        final Instruction instruction = new Instruction(operation);
+        final Instruction instruction = new Instruction(operation, tokenizer.getLineNo());
         if (firstOperand != null && secondOperand != null) {
             if (operation.getParameterCount() != 2) {
                 tokenizer.pushBack();
                 throw new ParserException("Instruction \"" + operation + "\" requires " 
-                        + operation.getParameterCount() + " parameters but found only 2", tokenizer);
+                        + operation.getParameterCount() + " parameters but found 2", tokenizer);
             }
 
             //with two parameters the order is reversed: OPC b, a
@@ -126,7 +126,7 @@ public class Parser {
     private Operation parseOperation() throws IOException, ParserException {
         final String token = getNextToken();
         
-        final Operation operation = Operation.parse(token);
+        final Operation operation = Operation.getByASM(token);
         if (operation == null) {
             throw new ParserException("Operation \"" + token + "\" is unknown", tokenizer);
         }

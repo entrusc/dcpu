@@ -17,11 +17,14 @@
 
 package de.darkblue.dcpu.parser;
 
+import de.darkblue.dcpu.interpreter.DCPU;
 import de.darkblue.dcpu.parser.instructions.Instruction;
 import de.darkblue.dcpu.parser.instructions.Operand;
 import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 import de.darkblue.dcpu.parser.instructions.operands.JumpMarkOperand;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -125,15 +128,22 @@ public class DCPUCode {
      * @param out
      * @throws IOException
      * @throws SemanticException 
+     * @return returns a map containing a memory to line no mapping
      */
-    public void store(OutputStream out) throws IOException, SemanticException {
+    public Map<Word, Integer> store(OutputStream out) throws IOException, SemanticException {
         resolveJumpMarkings();
 
+        final Map<Word, Integer> memoryToLineNoMap = new HashMap<>();
         DataOutputStream dataOut = new DataOutputStream(out);
+        
+        final Word position = new Word();
         for (final Instruction instruction : instructions) {
+            memoryToLineNoMap.put(position.clone(), instruction.getLineNo());
+            
             if (instruction.getOperation() != Operation.DAT) {
                 //DAT is not stored
                 instruction.store(dataOut);
+                position.inc();
             }
             
             //store possible additional parameters
@@ -141,15 +151,38 @@ public class DCPUCode {
                 Word word = new Word();
                 word.setSignedInt(instruction.getOperandA().getAdditionalWord());
                 word.store(dataOut);
+                position.inc();
             }            
             if (instruction.getOperation().getParameterCount() == 2) {
                 if (instruction.getOperandB().hasAdditionalWord()) {
                     Word word = new Word();
                     word.setSignedInt(instruction.getOperandB().getAdditionalWord());
                     word.store(dataOut);
+                    position.inc();
                 }
             }
         }
+        
+        return memoryToLineNoMap;
+    }
+    
+    /**
+     * compiles and stores the code directly in the emulator enabling
+     * to track originating code line numbers.
+     * 
+     * @param dcpu 
+     */
+    public void store(DCPU dcpu) throws IOException, SemanticException {
+        final ByteArrayOutputStream byteOut = 
+                new ByteArrayOutputStream();
+        final Map<Word, Integer> memoryLineNoMapping = this.store(byteOut);
+        dcpu.setMemoryToLineNoMapping(memoryLineNoMapping);
+        byteOut.flush();
+
+        final ByteArrayInputStream byteIn = 
+                new ByteArrayInputStream(byteOut.toByteArray());
+        dcpu.readRam(byteIn);
+        dcpu.clearRegisters();
     }
 
     @Override

@@ -31,8 +31,11 @@ public class Instruction {
     private Operand operandA;
     private Operand operandB;
     
-    public Instruction(Operation opcode) {
+    private final int lineNo;
+    
+    public Instruction(Operation opcode, int lineNo) {
         this.operation = opcode;
+        this.lineNo = lineNo;
     }
 
     public Operation getOperation() {
@@ -60,6 +63,10 @@ public class Instruction {
 
     public Operand getOperandB() {
         return operandB;
+    }
+
+    public int getLineNo() {
+        return lineNo;
     }
     
     @Override

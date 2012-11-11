@@ -61,6 +61,9 @@ public class RegistersFrame extends javax.swing.JDialog {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
+        registersTable.setToolTipText("");
+        registersTable.setSelectionBackground(new java.awt.Color(107, 129, 137));
+        registersTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane1.setViewportView(registersTable);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());

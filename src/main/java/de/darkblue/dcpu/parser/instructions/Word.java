@@ -176,9 +176,6 @@ public class Word {
     }
     
     public int getOperandB() {
-        if (!this.hasTwoOperandsAsInstruction()) {
-            throw new IllegalStateException("This word does not contain a second operand");
-        }
         return (this.word >> 5) & 0b0000_0000_0001_1111;
     }
     
@@ -250,7 +247,7 @@ public class Word {
     
     @Override
     public String toString() {
-        return String.format("%02x%02x", ((word >> 8) & 0xFF), (word & 0xFF));
+        return this.toHexString();
     }
 
     @Override
@@ -278,6 +275,10 @@ public class Word {
     public String toBinaryString() {
         return fill(Integer.toBinaryString(((word >> 8) & 0xFF)), '0', 8) 
                 + fill(Integer.toBinaryString((word & 0xFF)), '0', 8);
+    }
+    
+    public String toHexString() {
+        return String.format("%02x%02x", ((word >> 8) & 0xFF), (word & 0xFF));
     }
     
     private static String fill(String str, char c, int length) {

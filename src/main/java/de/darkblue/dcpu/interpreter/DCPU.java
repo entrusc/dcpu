@@ -22,6 +22,7 @@ import de.darkblue.dcpu.interpreter.instructions.InstructionDefinition;
 import de.darkblue.dcpu.interpreter.operands.Operand;
 import de.darkblue.dcpu.interpreter.operands.Operand.OperandMode;
 import de.darkblue.dcpu.interpreter.operands.OperandDefinition;
+import de.darkblue.dcpu.parser.instructions.Operation;
 import de.darkblue.dcpu.parser.instructions.Word;
 import de.darkblue.dcpu.parser.instructions.WordChangeListener;
 import java.io.DataInputStream;
@@ -50,7 +51,7 @@ public class DCPU {
     private static final String PACKAGE_INSTRUCTIONS = "de.darkblue.dcpu.interpreter.instructions";
     private static final String PACKAGE_OPERANDS = "de.darkblue.dcpu.interpreter.operands";
     
-    private static final Map<Integer, Class<? extends Instruction>> REGISTERED_INSTRUCTIONS = new HashMap<>();
+    private static final Map<Operation, Class<? extends Instruction>> REGISTERED_INSTRUCTIONS = new HashMap<>();
     private static final Map<Integer, Class<? extends Operand>> REGISTERED_OPERANDS = new HashMap<>();
     
     private static final long DEFAULT_HZ = 100_000; //100 kHz
@@ -61,7 +62,7 @@ public class DCPU {
         for (Class<? extends Instruction> instruction : instructions) {
             final InstructionDefinition defition = instruction.getAnnotation(InstructionDefinition.class);
             if (defition != null) {
-                REGISTERED_INSTRUCTIONS.put(defition.operation().getOpcode(), instruction);
+                REGISTERED_INSTRUCTIONS.put(defition.operation(), instruction);
             }
         }
         
@@ -92,6 +93,8 @@ public class DCPU {
     
     private boolean skipNextInstructionIfConditional = false;
 
+    private Map<Word, Integer> memoryToLineNoMapping;
+    
     public DCPU() {
         initRam();
         initRegisters();
@@ -100,6 +103,16 @@ public class DCPU {
         for (int i = 0; i < lastReadProgram.length; ++i) {
             lastReadProgram[i] = Word.ZERO.clone();
         }
+    }
+
+    /**
+     * sets a memory address to line number mapping used to fire the onNewLine() event
+     * on the listeners. If no mapping is set no such events will be fired.
+     * 
+     * @param memoryToLineNoMapping 
+     */
+    public void setMemoryToLineNoMapping(Map<Word, Integer> memoryToLineNoMapping) {
+        this.memoryToLineNoMapping = memoryToLineNoMapping;
     }
     
     public final void initRam() {
@@ -225,8 +238,17 @@ public class DCPU {
      * interpretes the next instruction
      */
     public void step() {
+        Integer lineNo = this.memoryToLineNoMapping.get(this.getPc());
+        if (lineNo != null) {
+            notifyOnNewLine(lineNo);
+        }
+        
         Word instructionBinary = this.getRam(this.getPc());
-        Class<? extends Instruction> instructionClass = REGISTERED_INSTRUCTIONS.get(instructionBinary.getOperationCode());
+        final Operation operation = Operation.getByOpcode(instructionBinary.getOperationCode(), instructionBinary.hasTwoOperandsAsInstruction() ? 2 : 1);
+        final Class<? extends Instruction> instructionClass = operation == null 
+                ? null 
+                : REGISTERED_INSTRUCTIONS.get(operation);
+        
         if (instructionClass == null) {
             if (instructionBinary.getOperationCode() == 0) {
                 //=> DAT 0 means stop the execution
@@ -470,6 +492,13 @@ public class DCPU {
             listener.onCyclesUpdate(this, this.cpuCycles);
         }
     }    
+    
+    private void notifyOnNewLine(int lineNo) {
+        for (DCPUListener listener : getListenerCopy()) {
+            listener.onNewLine(this, lineNo);
+        }
+    }    
+    
     private static <T> T instantiate(Class<T> clazz) {
         try {
             return clazz.newInstance();

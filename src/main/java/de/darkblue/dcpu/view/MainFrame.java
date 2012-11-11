@@ -25,8 +25,6 @@ import de.darkblue.dcpu.parser.ParserException;
 import de.darkblue.dcpu.parser.SemanticException;
 import de.darkblue.dcpu.parser.instructions.Word;
 import java.awt.Point;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -37,6 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Icon;
 import javax.swing.JFileChooser;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
@@ -56,6 +55,7 @@ public class MainFrame extends javax.swing.JFrame {
     private static final Icon ICON_LINE_ERROR = SwingUtils.loadIcon("process-stop-3.png");
     private static final Icon ICON_RUN = SwingUtils.loadIcon("arrow-right-3.png");
     private static final Icon ICON_STOP = SwingUtils.loadIcon("media-playback-stop-7.png");
+    private static final Icon ICON_CURRENT_LINE = SwingUtils.loadIcon("go-next-context.png");
     private static final FileFilter FILE_FILTER = new FileFilter() {
 
             @Override
@@ -119,6 +119,11 @@ public class MainFrame extends javax.swing.JFrame {
             @Override
             public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
             }
+
+            @Override
+            public void onNewLine(DCPU dcpu, int line) {
+                onLineUpdate(line);
+            }
             
         });
         
@@ -138,6 +143,8 @@ public class MainFrame extends javax.swing.JFrame {
         this.registersFrame.setLocation(memoryFrameLocation.x + memoryFrame.getWidth() - registersFrame.getWidth(), 
                 location.y + this.getHeight() / 2 - this.registersFrame.getHeight());
         this.registersFrame.setVisible(true);
+        
+        this.setCodeFile(null);
     }
     
     private void setNeedsCompilation(boolean needsCompilation) {
@@ -155,8 +162,12 @@ public class MainFrame extends javax.swing.JFrame {
     }
     
     private void onUpdate() {
+        dcpu.stop();
+        hideGutterIcon();
+        
         setNeedsCompilation(true);
         this.saveButton.setEnabled(true);
+        this.saveAsButton.setEnabled(true);
     }
     
     private void initCodeArea() {
@@ -206,17 +217,35 @@ public class MainFrame extends javax.swing.JFrame {
     
     private void clearGutterIcon() {
         codeScrollPane.getGutter().removeAllTrackingIcons();
-        codeScrollPane.setIconRowHeaderEnabled(false);
     }
     
-    private void setGutterIcon(int line, Icon icon) {
-        clearGutterIcon();
-        codeScrollPane.setIconRowHeaderEnabled(true);
-        try {
-            codeScrollPane.getGutter().addLineTrackingIcon(line, icon);
-        } catch (BadLocationException ex) {
-            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-        }
+    private void hideGutterIcon() {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                clearGutterIcon();
+                codeScrollPane.setIconRowHeaderEnabled(false);
+            }
+            
+        });
+    }
+    
+    private void setGutterIcon(final int line, final Icon icon) {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                clearGutterIcon();
+                codeScrollPane.setIconRowHeaderEnabled(true);
+                try {
+                    codeScrollPane.getGutter().addLineTrackingIcon(line, icon);
+                } catch (BadLocationException ex) {
+                    //may happen but is ignored because it is of no consequence
+                }
+            }
+            
+        });
     }
     
     private void compile() {
@@ -227,18 +256,11 @@ public class MainFrame extends javax.swing.JFrame {
             final Parser parser = new Parser(reader);
             final DCPUCode compiledCode = parser.parse();
             
-            final ByteArrayOutputStream byteOut = 
-                    new ByteArrayOutputStream();
-            compiledCode.store(byteOut);
-            byteOut.flush();
-            
-            final ByteArrayInputStream byteIn = 
-                    new ByteArrayInputStream(byteOut.toByteArray());
-            dcpu.readRam(byteIn);
+            compiledCode.store(dcpu);
             dcpu.clearRegisters();
             
             setNeedsCompilation(false);
-            this.clearError();
+            this.clearGutterHints();
         } catch (IOException e) {
             //should not happen
         } catch (ParserException e) {
@@ -253,14 +275,30 @@ public class MainFrame extends javax.swing.JFrame {
         if (lineNo != null) {
             this.setGutterIcon(lineNo, ICON_LINE_ERROR);
         } else {
-            this.clearGutterIcon();
+            this.hideGutterIcon();
         }
         this.errorPanel.setVisible(true);
     }
     
-    private void clearError() {
-        this.clearGutterIcon();
+    private void clearGutterHints() {
+        this.hideGutterIcon();
         this.errorPanel.setVisible(false);
+    }
+    
+    private void onLineUpdate(int lineNo) {
+        this.setGutterIcon(lineNo, ICON_CURRENT_LINE);
+    }
+    
+    private void setCodeFile(File codeFile) {
+        this.saveButton.setEnabled(false);
+        this.saveAsButton.setEnabled(false);
+
+        this.codeFile = codeFile;
+        if (codeFile != null) {
+            this.setTitle("DCPU - " + this.codeFile.getName());
+        } else {
+            this.setTitle("DCPU - [unnamed]");
+        }
     }
 
     /**
@@ -276,12 +314,16 @@ public class MainFrame extends javax.swing.JFrame {
         newButton = new javax.swing.JButton();
         openButton = new javax.swing.JButton();
         saveButton = new javax.swing.JButton();
+        saveAsButton = new javax.swing.JButton();
         filler4 = new javax.swing.Box.Filler(new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 32767));
         compileButton = new javax.swing.JButton();
         filler3 = new javax.swing.Box.Filler(new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 0), new java.awt.Dimension(3, 32767));
         resetButton = new javax.swing.JButton();
         runButton = new javax.swing.JButton();
         nextStepButton = new javax.swing.JButton();
+        filler5 = new javax.swing.Box.Filler(new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 0), new java.awt.Dimension(5, 32767));
+        registerWindowToggle = new javax.swing.JToggleButton();
+        memoryWindowToggle = new javax.swing.JToggleButton();
         errorPanel = new javax.swing.JPanel();
         errorPanel.setVisible(false);
         jLabel1 = new javax.swing.JLabel();
@@ -297,6 +339,7 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.setRollover(true);
 
         newButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-new-5.png"))); // NOI18N
+        newButton.setToolTipText("new file");
         newButton.setFocusable(false);
         newButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         newButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -308,6 +351,7 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.add(newButton);
 
         openButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-open-5.png"))); // NOI18N
+        openButton.setToolTipText("open file ...");
         openButton.setFocusable(false);
         openButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         openButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -318,7 +362,8 @@ public class MainFrame extends javax.swing.JFrame {
         });
         jToolBar1.add(openButton);
 
-        saveButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-export.png"))); // NOI18N
+        saveButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-save-5.png"))); // NOI18N
+        saveButton.setToolTipText("save");
         saveButton.setEnabled(false);
         saveButton.setFocusable(false);
         saveButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
@@ -329,9 +374,23 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
         jToolBar1.add(saveButton);
+
+        saveAsButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-save-as-5.png"))); // NOI18N
+        saveAsButton.setToolTipText("save as ...");
+        saveAsButton.setEnabled(false);
+        saveAsButton.setFocusable(false);
+        saveAsButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        saveAsButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        saveAsButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveAsButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(saveAsButton);
         jToolBar1.add(filler4);
 
-        compileButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/cog.png"))); // NOI18N
+        compileButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/run-build-2.png"))); // NOI18N
+        compileButton.setToolTipText("compile");
         compileButton.setEnabled(false);
         compileButton.setFocusable(false);
         compileButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
@@ -345,7 +404,7 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.add(filler3);
 
         resetButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/document-revert-5.png"))); // NOI18N
-        resetButton.setToolTipText("reset");
+        resetButton.setToolTipText("reset execution");
         resetButton.setEnabled(false);
         resetButton.setFocusable(false);
         resetButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
@@ -358,6 +417,7 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.add(resetButton);
 
         runButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/arrow-right-3.png"))); // NOI18N
+        runButton.setToolTipText("run program");
         runButton.setEnabled(false);
         runButton.setFocusable(false);
         runButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
@@ -370,7 +430,7 @@ public class MainFrame extends javax.swing.JFrame {
         jToolBar1.add(runButton);
 
         nextStepButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/arrow-right-double.png"))); // NOI18N
-        nextStepButton.setToolTipText("next instruction");
+        nextStepButton.setToolTipText("execute the next instruction");
         nextStepButton.setEnabled(false);
         nextStepButton.setFocusable(false);
         nextStepButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
@@ -381,6 +441,33 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
         jToolBar1.add(nextStepButton);
+        jToolBar1.add(filler5);
+
+        registerWindowToggle.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/kdb_table.png"))); // NOI18N
+        registerWindowToggle.setSelected(true);
+        registerWindowToggle.setToolTipText("dcpu registers");
+        registerWindowToggle.setFocusable(false);
+        registerWindowToggle.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        registerWindowToggle.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        registerWindowToggle.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                registerWindowToggleActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(registerWindowToggle);
+
+        memoryWindowToggle.setIcon(new javax.swing.ImageIcon(getClass().getResource("/de/darkblue/dcpu/view/database-table.png"))); // NOI18N
+        memoryWindowToggle.setSelected(true);
+        memoryWindowToggle.setToolTipText("dcpu memory");
+        memoryWindowToggle.setFocusable(false);
+        memoryWindowToggle.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        memoryWindowToggle.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        memoryWindowToggle.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                memoryWindowToggleActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(memoryWindowToggle);
 
         getContentPane().add(jToolBar1, java.awt.BorderLayout.PAGE_START);
 
@@ -429,6 +516,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void resetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetButtonActionPerformed
         dcpu.reset();
+        clearGutterHints();
         resetButton.setEnabled(false);
     }//GEN-LAST:event_resetButtonActionPerformed
 
@@ -442,7 +530,8 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void newButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newButtonActionPerformed
         codeArea.setText("");
-        this.codeFile = null;
+        setCodeFile(null);
+        
         this.saveButton.setEnabled(false);
     }//GEN-LAST:event_newButtonActionPerformed
 
@@ -465,8 +554,7 @@ public class MainFrame extends javax.swing.JFrame {
                         }
                     } while (read >= 0);
                     this.codeArea.setText(sb.toString());
-                    this.saveButton.setEnabled(false);
-                    this.codeFile = file;
+                    this.setCodeFile(file);
                 }
             } catch (IOException e) {
                 
@@ -476,20 +564,32 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
         if (this.codeFile == null) {
-            final JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFileFilter(FILE_FILTER);
-
-            int returnVal = fileChooser.showSaveDialog(this);
-
-            if (returnVal == JFileChooser.APPROVE_OPTION) {
-                final File file = fileChooser.getSelectedFile();
-                saveCodeTo(file);      
-                this.codeFile = file;
-            }
+            saveAsButtonActionPerformed(null);
         } else {
             saveCodeTo(this.codeFile);
         }
     }//GEN-LAST:event_saveButtonActionPerformed
+
+    private void saveAsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveAsButtonActionPerformed
+        final JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(FILE_FILTER);
+
+        int returnVal = fileChooser.showSaveDialog(this);
+
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            final File file = fileChooser.getSelectedFile();
+            saveCodeTo(file);      
+            this.setCodeFile(file);
+        }
+    }//GEN-LAST:event_saveAsButtonActionPerformed
+
+    private void registerWindowToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_registerWindowToggleActionPerformed
+        this.registersFrame.setVisible(registerWindowToggle.isSelected());
+    }//GEN-LAST:event_registerWindowToggleActionPerformed
+
+    private void memoryWindowToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_memoryWindowToggleActionPerformed
+        this.memoryFrame.setVisible(memoryWindowToggle.isSelected());
+    }//GEN-LAST:event_memoryWindowToggleActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton compileButton;
@@ -497,14 +597,18 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JTextArea errorText;
     private javax.swing.Box.Filler filler3;
     private javax.swing.Box.Filler filler4;
+    private javax.swing.Box.Filler filler5;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JToolBar jToolBar1;
+    private javax.swing.JToggleButton memoryWindowToggle;
     private javax.swing.JButton newButton;
     private javax.swing.JButton nextStepButton;
     private javax.swing.JButton openButton;
+    private javax.swing.JToggleButton registerWindowToggle;
     private javax.swing.JButton resetButton;
     private javax.swing.JButton runButton;
+    private javax.swing.JButton saveAsButton;
     private javax.swing.JButton saveButton;
     // End of variables declaration//GEN-END:variables
 

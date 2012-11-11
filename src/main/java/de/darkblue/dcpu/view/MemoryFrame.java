@@ -17,6 +17,16 @@
 package de.darkblue.dcpu.view;
 
 import de.darkblue.dcpu.interpreter.DCPU;
+import de.darkblue.dcpu.parser.instructions.Word;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.SystemColor;
+import javax.swing.DefaultListSelectionModel;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
 
 /**
  *
@@ -27,10 +37,66 @@ public class MemoryFrame extends javax.swing.JDialog {
     /**
      * Creates new form MemoryFrame
      */
-    public MemoryFrame(java.awt.Frame parent, DCPU dcpu) {
+    public MemoryFrame(java.awt.Frame parent, final DCPU dcpu) {
         super(parent, false);
         initComponents();
         this.ramTable.setModel(new DCPUMemoryTableModel(dcpu));
+        
+        //disallow selection of column 0
+        this.ramTable.getColumnModel().setSelectionModel(new DefaultListSelectionModel() {
+
+            @Override
+            public void setSelectionInterval(int index0, int index1) {
+                if (index0 < 1 || index1 < 1) {
+                    return;
+                }
+                super.setSelectionInterval(index0, index1);
+            }
+
+        });
+        
+        //update the cell information panel
+        ListSelectionListener listSelectionListener = new ListSelectionListener() {
+
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+               int col = ramTable.convertColumnIndexToModel(ramTable.getSelectedColumn()) - 1;
+               int row = ramTable.convertRowIndexToModel(ramTable.getSelectedRow());
+               final Word position = new Word();
+               position.setUnsignedInt(row * (ramTable.getModel().getColumnCount() - 1) + col);
+               memoryCellInformationPanel1.setMemoryCell("0x" + position.toHexString(), dcpu.getRam(position));
+            }
+        };
+        this.ramTable.getSelectionModel().addListSelectionListener(listSelectionListener);
+        this.ramTable.getColumnModel().getSelectionModel().addListSelectionListener(listSelectionListener);
+        
+        //change selected and first cell design
+        this.ramTable.setDefaultRenderer(Word.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+               int selectedCol = ramTable.convertColumnIndexToModel(ramTable.getSelectedColumn());
+               int selectedRow = ramTable.convertRowIndexToModel(ramTable.getSelectedRow());
+                if (isSelected || hasFocus || (selectedCol == column && selectedRow == row)) {
+                    c.setBackground(new Color(107, 129, 137));
+                    c.setForeground(new Color(255, 255, 255));
+                } else {
+                    if (column == 0) {
+                        c.setBackground(SystemColor.control);
+                        c.setForeground(SystemColor.controlText);
+                    } else {
+                        c.setBackground(table.getBackground());
+                        c.setForeground(table.getForeground());
+                    }
+                }
+                return c;
+            }            
+        });
+        
+        ramTable.getColumnModel().getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        ramTable.getSelectionModel().setSelectionInterval(0, 0);
+        ramTable.getColumnModel().getSelectionModel().setSelectionInterval(1, 1);
     }
 
     /**
@@ -44,6 +110,7 @@ public class MemoryFrame extends javax.swing.JDialog {
 
         jScrollPane1 = new javax.swing.JScrollPane();
         ramTable = new javax.swing.JTable();
+        memoryCellInformationPanel1 = new de.darkblue.dcpu.view.MemoryCellInformationPanel();
 
         setTitle("DCPU Memory");
 
@@ -61,22 +128,26 @@ public class MemoryFrame extends javax.swing.JDialog {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
+        ramTable.setToolTipText("");
         ramTable.setDoubleBuffered(true);
+        ramTable.setRowSelectionAllowed(false);
+        ramTable.setSelectionBackground(new java.awt.Color(107, 129, 137));
+        ramTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane1.setViewportView(ramTable);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jScrollPane1)
-                .addGap(0, 0, 0))
+            .addComponent(jScrollPane1)
+            .addComponent(memoryCellInformationPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 346, Short.MAX_VALUE)
-                .addGap(0, 0, 0))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 322, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(memoryCellInformationPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
 
         pack();
@@ -84,6 +155,7 @@ public class MemoryFrame extends javax.swing.JDialog {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JScrollPane jScrollPane1;
+    private de.darkblue.dcpu.view.MemoryCellInformationPanel memoryCellInformationPanel1;
     private javax.swing.JTable ramTable;
     // End of variables declaration//GEN-END:variables
 }

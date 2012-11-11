@@ -38,4 +38,6 @@ public interface DCPUListener {
     
     void onCyclesUpdate(DCPU dcpu, long totalCycles);
     
+    void onNewLine(DCPU dcpu, int line);
+    
 }

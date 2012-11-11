@@ -47,6 +47,11 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUList
     }
 
     @Override
+    public Class<?> getColumnClass(int columnIndex) {
+        return Word.class;
+    }
+    
+    @Override
     public String getColumnName(int column) {
         if (column == 0) {
             return "";
@@ -96,6 +101,10 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUList
 
     @Override
     public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
+    }
+
+    @Override
+    public void onNewLine(DCPU dcpu, int lin) {
     }
     
     

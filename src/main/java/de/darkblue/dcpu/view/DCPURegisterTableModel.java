@@ -99,5 +99,9 @@ public class DCPURegisterTableModel extends AbstractTableModel implements DCPULi
     public void onCyclesUpdate(DCPU dcpu, long totalCycles) {
         fireTableCellUpdated(Register.values().length, 1);
     }
+
+    @Override
+    public void onNewLine(DCPU dcpu, int lin) {
+    }
     
 }
