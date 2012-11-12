@@ -134,7 +134,7 @@ public class MainFrame extends javax.swing.JFrame {
         final Point location = this.getLocation();
         
         this.memoryFrame = new MemoryFrame(this, dcpu);
-        this.memoryFrame.setLocation(location.x + (this.getWidth() * 4) / 5, 
+        this.memoryFrame.setLocation(location.x + (this.getWidth() * 3) / 7, 
                 location.y + this.getHeight() / 2);
         this.memoryFrame.setVisible(true);
         

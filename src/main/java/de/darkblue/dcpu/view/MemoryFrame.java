@@ -85,7 +85,10 @@ public class MemoryFrame extends javax.swing.JDialog {
                         c.setBackground(SystemColor.control);
                         c.setForeground(SystemColor.controlText);
                     } else {
-                        c.setBackground(table.getBackground());
+                        final Color basicColor = table.getBackground();
+                        final Color rowColor = row % 2 == 0 ? basicColor : basicColor.brighter();
+                        final Color colColor = column % 2 == 0 ? basicColor : SwingUtils.shiftHue(basicColor);
+                        c.setBackground(SwingUtils.mix(rowColor, colColor));
                         c.setForeground(table.getForeground());
                     }
                 }
@@ -139,13 +142,13 @@ public class MemoryFrame extends javax.swing.JDialog {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 811, Short.MAX_VALUE)
             .addComponent(memoryCellInformationPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 322, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 329, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(memoryCellInformationPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );

@@ -16,6 +16,7 @@
  */
 package de.darkblue.dcpu.view;
 
+import java.awt.Color;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
@@ -29,6 +30,22 @@ public class SwingUtils {
     
     public static Icon loadIcon(String iconName) {
         return new ImageIcon(SwingUtils.class.getResource("/de/darkblue/dcpu/view/" + iconName));
+    }
+    
+    public static Color shiftHue(Color color) {
+        float[] hsl = new float[3];
+        Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), hsl);
+        
+        hsl[0] += 0.33f % 1.0f;
+        return Color.getHSBColor(hsl[0], hsl[1], hsl[2]);
+    }
+    
+    public static Color mix(Color c1, Color c2) {
+        return new Color(
+                    (c1.getRed() + c2.getRed()) / 2, 
+                    (c1.getGreen() + c2.getGreen()) / 2, 
+                    (c1.getBlue() + c2.getBlue()) / 2
+                );
     }
     
 }

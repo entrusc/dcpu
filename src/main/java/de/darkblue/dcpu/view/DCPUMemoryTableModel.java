@@ -38,12 +38,12 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUList
 
     @Override
     public int getRowCount() {
-        return (int) Math.ceil(dcpu.getRamSize() / 8); //8 per row
+        return (int) Math.ceil(dcpu.getRamSize() / 16); //16 per row
     }
 
     @Override
     public int getColumnCount() {
-        return 9;
+        return 17;
     }
 
     @Override
@@ -64,9 +64,9 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUList
     public Object getValueAt(int rowIndex, int columnIndex) {
         if (columnIndex == 0) {
             //col 0 is always the address
-            return String.format("0x%04x", rowIndex * 8);
+            return String.format("0x%04x", rowIndex * 16);
         } else {
-            int position = rowIndex * 8 + (columnIndex - 1);
+            int position = rowIndex * 16 + (columnIndex - 1);
             final Word positionWord = new Word();
             positionWord.setSignedInt(position);
 
@@ -77,8 +77,8 @@ public class DCPUMemoryTableModel extends AbstractTableModel implements DCPUList
     @Override
     public void onRamValueChanged(DCPU dcpu, Word position) {
         int positionValue = position.unsignedIntValue();
-        int row = positionValue / 8;
-        int col = positionValue % 8;
+        int row = positionValue / 16;
+        int col = positionValue % 16;
         
         fireTableCellUpdated(row, col + 1);
     }
